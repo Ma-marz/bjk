@@ -1,0 +1,57 @@
+body {
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    display: grid;
+    grid-template-columns: auto auto auto;
+
+    background-image: url('https://www.itakeyou.co.uk/wp-content/uploads/2022/10/christmas-wallpapers.jpg'); /* Add the URL to your background image */
+    background-size: cover; /* Ensures the background image covers the entire page */
+    background-position: center; /* Centers the background image */
+    background-repeat: no-repeat; /* Prevents the image from repeating */
+}
+
+h2 {
+    font-family: Silom, serif;
+}
+
+#content {
+    background: #e4d6cc;
+    padding: 2px 20px 30px 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2)
+}
+
+#error {
+    transition-duration: 3s;
+    color: red;
+    display: none;
+    font-family: Silom, serif;
+    font-size: 14px;
+    padding-bottom: 10px;
+}
+
+
+button {
+    transition-duration: 1s;
+    display: inline-block;
+    background: #e3a274;
+    font-family: Silom, serif;
+    border-radius: 15px;
+    width: 100px;
+    height: 30px;
+}
+
+button:hover {
+    transition-duration: 1s;
+    background: #cfe374;
+}
+
+input {
+    border-radius: 5px;
+}
+
+label {
+    font-family: Silom, serif;
+}
