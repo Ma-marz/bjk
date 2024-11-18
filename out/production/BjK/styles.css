@@ -16,37 +16,6 @@ h2 {
     font-family: Silom, serif;
 }
 
-#j {
-    animation: colorChange 12s infinite; /* 10s for a full cycle, repeats infinitely */
-}
-
-/* Keyframes for alternating color */
-@keyframes colorChange {
-    0%, 80% {
-        color: black; /* Black for the first 5 seconds */
-    }
-    80%, 70% {
-        color: black; /* Black for the first 5 seconds */
-    }
-    70%, 75% {
-        color: red; /* Red for the next 5 seconds */
-    }
-    85%, 100% {
-        color: black; /* Black for the first 5 seconds */
-    }
-}
-
-#j:hover {
-    animation: none;
-    color: red;
-}
-
-#j:hover::after {
-    transition-duration: 1s;
-    content: "õuluvanad";
-    color: red;
-}
-
 #content {
     background: #e4d6cc;
     padding: 2px 20px 30px 20px;

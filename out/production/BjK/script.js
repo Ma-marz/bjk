@@ -27,7 +27,6 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
 
                         // Optionally, store user login status in local storage to remember the login
                         localStorage.setItem('loggedInUser', JSON.stringify(user));
-                        localStorage.setItem('loggedSanta', JSON.stringify(santa));
                         document.getElementById('loginForm').style.display = 'none';
                     })
                     .catch(error => console.error('Error fetching santa data:', error));
@@ -47,7 +46,6 @@ function base64ToUtf8(base64Str) {
 // Check if user is already logged in (using localStorage)
 window.onload = function() {
     const loggedInUser = localStorage.getItem('loggedInUser');
-    const loggedSanta = localStorage.getItem('loggedSanta');
     if (loggedInUser) {
         const user = JSON.parse(loggedInUser);
         document.getElementById('welcome').style.display = 'block';
@@ -55,17 +53,12 @@ window.onload = function() {
         document.getElementById('error').style.display = 'none';
         document.getElementById('loginForm').style.display = 'none';
     }
-    if (loggedSanta) {
-        const santa = JSON.parse(loggedSanta);
-        document.getElementById('toName').textContent = base64ToUtf8(santa.name);
-    }
 };
 
 // Handle Logout
 document.getElementById('logoutButton')?.addEventListener('click', function() {
     // Remove user data from localStorage
     localStorage.removeItem('loggedInUser');
-    localStorage.removeItem('loggedSanta');
     // Hide welcome message and show login form
     document.getElementById('welcome').style.display = 'none';
     document.getElementById('loginForm').style.display = 'block';
