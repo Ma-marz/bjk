@@ -4,7 +4,7 @@ body {
     height: 100vh;
     margin: 0;
     display: grid;
-    grid-template-columns: auto auto auto;
+    grid-template-columns: 5% auto 5%;
 
     background-image: url('https://www.itakeyou.co.uk/wp-content/uploads/2022/10/christmas-wallpapers.jpg'); /* Add the URL to your background image */
     background-size: cover; /* Ensures the background image covers the entire page */
