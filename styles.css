@@ -6,7 +6,7 @@ body {
     display: grid;
     grid-template-columns: 5% auto 5%;
 
-    background-image: url('https://www.itakeyou.co.uk/wp-content/uploads/2022/10/christmas-wallpapers.jpg'); /* Add the URL to your background image */
+    background-image: url('back.png'); /* Add the URL to your background image */
     background-size: cover; /* Ensures the background image covers the entire page */
     background-position: center; /* Centers the background image */
     background-repeat: no-repeat; /* Prevents the image from repeating */
@@ -14,6 +14,11 @@ body {
 
 h2 {
     font-family: Silom, serif;
+}
+
+.center {
+    display: grid;
+    grid-template-columns: auto auto auto;
 }
 
 #j {
@@ -49,16 +54,17 @@ h2 {
 
 #content {
     background: #e4d6cc;
+    max-width: 350px;
     margin: 10px;
     padding: 2px 20px 30px 20px;
     border-radius: 10px;
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.2)
 }
 
-#error {
+#error, #randomError {
+    display: none;
     transition-duration: 3s;
     color: red;
-    display: none;
     font-family: Silom, serif;
     font-size: 14px;
     padding-bottom: 10px;
@@ -82,8 +88,34 @@ button:hover {
 
 input {
     border-radius: 5px;
+    font-size: 16px;
+    font-family: Georgia, serif;
+    font-style: oblique;
+    width: 150px;
+    text-align: center;
 }
 
 label {
     font-family: Silom, serif;
+}
+
+#login, .logout {
+    display: grid;
+    grid-template-columns: auto min-content;
+}
+
+#randomUserName, #userName {
+    font-size: 25px;
+    color: chocolate;
+}
+
+#password {
+    font-family: 'password', serif; /* Custom font for password-like display */
+    -webkit-text-security: disc; /* For webkit browsers */
+    text-security: disc;
+}
+
+#toName {
+    font-size: 20px;
+    color: #d90f5d;
 }

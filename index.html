@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="styles.css">
-  <title>BjK</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="paadike_cover.png" type="image/x-icon">
+    <link rel="stylesheet" href="styles.css">
+    <title>BjK</title>
 </head>
 
 <body>
@@ -14,23 +15,51 @@
   <div id="content">
     <h2 id="bjk" >B<span id="j">j</span>K</h2>
     <form id="loginForm">
-      <label for="name">Nimi:</label><br>
-      <input type="text" id="name" name="name" required><br><br>
+        <div class="center">
+        <div></div>
+        <div>
+            <label for="name">Nimi:</label><br>
+            <input type="text" id="name" name="firstname" required><br><br>
 
-      <label for="password">Salasõna:</label><br>
-      <input type="password" id="password" name="password" required><br><br>
-
+            <label for="password">Salasõna:</label><br>
+            <input type="text" id="password" name="password" ><br><br>
+        </div>
+        <div></div>
+        </div>
       <div id="error" >See pole õige salasõna!</div>
 
-      <button type="submit">Sisene</button>
+      <div id="randomError" >
+        <p>
+            Aga see pole ju isegi mitte ühegi BjK'i liikme eesnimi??? <br>
+            Sa võid ju proovida mingeid nimesi katsetada, kes teab, mida kõike siia on progega peidetud...
+        </p>
+      </div>
+
+      <div id="login">
+        <div></div><button type="submit">Sisene</button>
+      </div>
     </form>
 
-    <div id="welcome" style="display: none;">
-      <h3>Terekest, <span id="userName"></span>!</h3>
-      <p>Isik, kellele sina kingi teed, on <span id="toName"></span>.</p>
+        <div id="welcome" style="display: none;">
+          <h3>Terekest, <span id="userName"></span>!</h3>
+          <p>Isik, kellele sina kingi teed, on <span id="toName"></span>.</p>
 
-      <button id="logoutButton" >Logi välja</button>
-    </div>
+
+          <div class="logout" >
+            <div></div><button id="logoutButton" >Logi välja</button>
+          </div>
+        </div>
+
+      <div id="randomWelcome" style="display: none;">
+          <h3>Terekest, <span id="randomUserName"></span>!</h3>
+          <h4>Poleks tegelt eal arvanud, et sina siia sisse logima satud...</h4>
+          <p>Isik, kellele sina kingi teed, on... map teagi nüüd... <span id="x"></span>.</p>
+
+
+          <div class="logout" >
+              <div></div><button id="logoutButton2" >Logi välja</button>
+          </div>
+      </div>
   </div>
 
 </div>

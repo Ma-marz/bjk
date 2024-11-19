@@ -11,19 +11,22 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
     fetch('users.json')
         .then(response => response.json())  // Parse the JSON data
         .then(users => {
-            const user = users.find(user => user.name === name && user.password === password);
+            const isNotRandomUser = users.find(user => user.name.toLowerCase() === name.toLowerCase());
+            const randomUser = users.find(user => user.name.toLowerCase() === name.toLowerCase() && user.x !== null);
+            const user = users.find(user => user.name.toLowerCase() === name.toLowerCase() && user.password === password);
 
             if (user) {
                 // If user found, show personalized content
                 fetch('secret_santas.json')
                     .then(response => response.json())  // Parse the JSON data
                     .then(santas => {
-                        const santa = santas.find(santa => santa.santa === name);
+                        const santa = santas.find(santa => santa.santa.toLowerCase() === name.toLowerCase());
 
                         document.getElementById('welcome').style.display = 'block';
                         document.getElementById('userName').textContent = user.name;
                         document.getElementById('toName').textContent = base64ToUtf8(santa.name);
                         document.getElementById('error').style.display = 'none';
+                        document.getElementById('randomError').style.display = 'none';
 
                         // Optionally, store user login status in local storage to remember the login
                         localStorage.setItem('loggedInUser', JSON.stringify(user));
@@ -32,9 +35,27 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
                     })
                     .catch(error => console.error('Error fetching santa data:', error));
             } else {
-                // If credentials are invalid, show error message
-                document.getElementById('error').style.display = 'block';
-                document.getElementById('welcome').style.display = 'none';
+                if (randomUser) {
+                    document.getElementById('randomWelcome').style.display = 'block';
+                    document.getElementById('randomUserName').textContent = randomUser.name;
+                    document.getElementById('x').textContent = randomUser.x;
+                    document.getElementById('error').style.display = 'none';
+                    document.getElementById('randomError').style.display = 'none';
+                    document.getElementById('loginForm').style.display = 'none';
+                    localStorage.setItem('loggedInUser', JSON.stringify(user));
+                } else {
+                    if (!isNotRandomUser) {
+                        document.getElementById('randomError').style.display = 'block';
+                        document.getElementById('error').style.display = 'none';
+                        document.getElementById('welcome').style.display = 'none';
+                    }
+                    else {
+                        // If credentials are invalid, show error message
+                        document.getElementById('error').style.display = 'block';
+                        document.getElementById('randomError').style.display = 'none';
+                        document.getElementById('welcome').style.display = 'none';
+                    }
+                }
             }
         })
         .catch(error => console.error('Error fetching user data:', error));
@@ -63,11 +84,23 @@ window.onload = function() {
 
 // Handle Logout
 document.getElementById('logoutButton')?.addEventListener('click', function() {
+    logout()
+});
+
+document.getElementById('logoutButton2')?.addEventListener('click', function() {
+    logout()
+});
+
+function logout() {
     // Remove user data from localStorage
     localStorage.removeItem('loggedInUser');
     localStorage.removeItem('loggedSanta');
     // Hide welcome message and show login form
     document.getElementById('welcome').style.display = 'none';
+    document.getElementById('randomWelcome').style.display = 'none';
     document.getElementById('loginForm').style.display = 'block';
     document.getElementById('error').style.display = 'none';
-});
+    document.getElementById('randomError').style.display = 'none';
+    document.getElementById('password').textContent = null;
+
+}
