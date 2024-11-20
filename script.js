@@ -170,7 +170,7 @@ async function loadPDF(fileURL){
     const page = await pdf.getPage(1); // Get the first page
 
     // Set canvas dimensions to fit the PDF page
-    const viewport = page.getViewport({ scale: 1.5 }); // Scale for better quality
+    const viewport = page.getViewport({ scale: 3.5 }); // Scale for better quality
     canvas.width = viewport.width;
     canvas.height = viewport.height;
 
@@ -181,5 +181,25 @@ async function loadPDF(fileURL){
     };
     await page.render(renderContext).promise;
 
+    // Adjust contrast after rendering
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const contrast = 100; // Adjust contrast level as needed
+    const adjustedImageData = adjustContrast(imageData, contrast);
+    ctx.putImageData(adjustedImageData, 0, 0);
+
     document.getElementById('pdfCanvas').style.display = 'block'
+}
+
+function adjustContrast(imageData, contrast) {
+    const data = imageData.data;
+    const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+
+    for (let i = 0; i < data.length; i += 4) {
+        data[i] = factor * (data[i] - 128) + 128;     // Red
+        data[i + 1] = factor * (data[i + 1] - 128) + 128; // Green
+        data[i + 2] = factor * (data[i + 2] - 128) + 128; // Blue
+        // Alpha (data[i + 3]) remains unchanged
+    }
+
+    return imageData;
 }
