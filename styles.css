@@ -4,7 +4,7 @@ body {
     height: 100vh;
     margin: 0;
     display: grid;
-    grid-template-columns: 5% auto 5%;
+    grid-template-columns: auto auto auto;
 
     background-image: url('back.png'); /* Add the URL to your background image */
     background-size: cover; /* Ensures the background image covers the entire page */
@@ -103,6 +103,15 @@ label {
     grid-template-columns: auto min-content;
 }
 
+#logoutButton {
+    background: #e4d6cc;
+}
+
+#logoutButton:hover {
+    transition-duration: 1s;
+    background: #ff98a7;
+}
+
 #randomUserName, #userName {
     font-size: 25px;
     color: chocolate;
@@ -117,4 +126,51 @@ label {
 #toName {
     font-size: 20px;
     color: #d90f5d;
+}
+
+#contentHeader {
+    display: grid;
+    grid-template-columns: min-content auto;
+}
+
+.menuItem {
+    margin: 0 2px;
+    padding: 0 10px;
+    background: #e4d6cc;
+    font-family: Silom, serif;
+    border-radius: 5px;
+    width: max-content;
+    height: 30px;
+}
+
+.menuItem.active {
+    background: #e3a274;
+    top: 3px;
+}
+
+.prayerWeekButton {
+    background: #e4d6cc;
+    border-radius: 5px;
+}
+
+.prayerWeekButton.active {
+    background: #e3a274;
+}
+
+#pdfCanvas {
+    position: relative;
+    height: calc(90vh);
+    border: none;
+}
+
+
+@media (max-width: 768px) {
+    body {
+        grid-template-columns: auto;
+    }
+
+    #pdfCanvas {
+        width: calc(100vw);
+        height: auto;
+    }
 }

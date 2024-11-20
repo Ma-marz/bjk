@@ -11,7 +11,8 @@
 <body>
 <div></div>
 
-<div id="main">
+<div id="main" class="center">
+    <div></div>
   <div id="content">
     <h2 id="bjk" >B<span id="j">j</span>K</h2>
     <form id="loginForm">
@@ -40,31 +41,42 @@
       </div>
     </form>
 
-        <div id="welcome" style="display: none;">
+      <div id="realContent" style="display: block;">
           <h3>Terekest, <span id="userName"></span>!</h3>
-          <p>Isik, kellele sina kingi teed, on <span id="toName"></span>.</p>
-
-
-          <div class="logout" >
-            <div></div><button id="logoutButton" >Logi välja</button>
+          <div id="contentHeader">
+              <button id="secretSantaMenu" class="menuItem active">Secret Santa</button>
+              <button id="prayerMenu" class="menuItem">Eestpalvesedelid</button>
           </div>
-        </div>
 
-      <div id="randomWelcome" style="display: none;">
-          <h3>Terekest, <span id="randomUserName"></span>!</h3>
-          <h4>Poleks tegelt eal arvanud, et sina siia sisse logima satud...</h4>
-          <p>Isik, kellele sina kingi teed, on... map teagi nüüd... <span id="x"></span>.</p>
+            <div id="secretSantaContent" style="display: block">
+              <div id="welcome" style="display: none;">
+                  <p>Isik, kellele sina kingi teed, on <span id="toName"></span>.</p>
+              </div>
 
+              <div id="randomWelcome" style="display: none;">
+                  <h4>Poleks tegelt eal arvanud, et sina siia sisse logima satud...</h4>
+                  <p>Isik, kellele sina kingi teed, on... map teagi nüüd... <span id="x"></span>.</p>
+              </div>
+            </div>
 
+          <div id="prayersContent" style="display: none">
+              <br>
+              <div id="prayersList"></div>
+              <br>
+
+          </div>
           <div class="logout" >
-              <div></div><button id="logoutButton2" >Logi välja</button>
+              <div></div><button id="logoutButton" >Logi välja</button>
           </div>
       </div>
+
   </div>
+    <div></div>
 
 </div>
-<div></div>
+<div><canvas id="pdfCanvas"></canvas></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script src="script.js"></script>
 
 </body>

@@ -6,7 +6,7 @@ body {
     display: grid;
     grid-template-columns: auto auto auto;
 
-    background-image: url('https://www.itakeyou.co.uk/wp-content/uploads/2022/10/christmas-wallpapers.jpg'); /* Add the URL to your background image */
+    background-image: url('back.png'); /* Add the URL to your background image */
     background-size: cover; /* Ensures the background image covers the entire page */
     background-position: center; /* Centers the background image */
     background-repeat: no-repeat; /* Prevents the image from repeating */
@@ -16,22 +16,59 @@ h2 {
     font-family: Silom, serif;
 }
 
+.center {
+    display: grid;
+    grid-template-columns: auto max-content max-content;
+}
+
+#j {
+    animation: colorChange 12s infinite; /* 10s for a full cycle, repeats infinitely */
+}
+
+/* Keyframes for alternating color */
+@keyframes colorChange {
+    0%, 80% {
+        color: black; /* Black for the first 5 seconds */
+    }
+    80%, 70% {
+        color: black; /* Black for the first 5 seconds */
+    }
+    70%, 75% {
+        color: red; /* Red for the next 5 seconds */
+    }
+    85%, 100% {
+        color: black; /* Black for the first 5 seconds */
+    }
+}
+
+#j:hover {
+    animation: none;
+    color: red;
+}
+
+#j:hover::after {
+    transition-duration: 1s;
+    content: "õuluvanad";
+    color: red;
+}
+
 #content {
     background: #e4d6cc;
+    max-width: 350px;
+    margin: 10px;
     padding: 2px 20px 30px 20px;
     border-radius: 10px;
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.2)
 }
 
-#error {
+#error, #randomError {
+    display: none;
     transition-duration: 3s;
     color: red;
-    display: none;
     font-family: Silom, serif;
     font-size: 14px;
     padding-bottom: 10px;
 }
-
 
 button {
     transition-duration: 1s;
@@ -50,8 +87,72 @@ button:hover {
 
 input {
     border-radius: 5px;
+    font-size: 16px;
+    font-family: Georgia, serif;
+    font-style: oblique;
+    width: 180px;
+    text-align: center;
 }
 
 label {
     font-family: Silom, serif;
+}
+
+#login, .logout {
+    display: grid;
+    grid-template-columns: auto min-content;
+}
+
+#randomUserName, #userName {
+    font-size: 25px;
+    color: chocolate;
+}
+
+#password {
+    font-family: 'password', serif; /* Custom font for password-like display */
+    -webkit-text-security: disc; /* For webkit browsers */
+    text-security: disc;
+}
+
+#toName {
+    font-size: 20px;
+    color: #d90f5d;
+}
+
+#contentHeader {
+    display: grid;
+    grid-template-columns: min-content auto;
+}
+
+.menuItem {
+    margin: 0 2px;
+    padding: 0 10px;
+    background: #e4d6cc;
+    font-family: Silom, serif;
+    border-radius: 5px;
+    width: max-content;
+    height: 30px;
+}
+
+.menuItem.active {
+    background: #e3a274;
+    top: 3px;
+}
+
+#pdfCanvas {
+    position: relative;
+    height: calc(90vh);
+    border: none;
+}
+
+
+@media (max-width: 768px) {
+    body {
+        grid-template-columns: auto;
+    }
+
+    #pdfCanvas {
+        width: calc(100vw);
+        height: auto;
+    }
 }
