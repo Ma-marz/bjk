@@ -112,6 +112,8 @@ label {
     background: #ff98a7;
 }
 
+
+
 #randomUserName, #userName {
     font-size: 25px;
     color: chocolate;
@@ -133,7 +135,7 @@ label {
     grid-template-columns: min-content auto;
 }
 
-.menuItem {
+.menuItem, #openPDFButton {
     margin: 0 2px;
     padding: 0 10px;
     background: #e4d6cc;
@@ -146,6 +148,10 @@ label {
 .menuItem.active {
     background: #e3a274;
     top: 3px;
+}
+
+#openPDFButton {
+    width: 100vw;
 }
 
 .prayerWeekButton {

@@ -34,8 +34,8 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
                         document.getElementById('randomError').style.display = 'none';
 
                         // Optionally, store user login status in local storage to remember the login
-                        localStorage.setItem('loggedInUser', JSON.stringify(user));
-                        localStorage.setItem('loggedSanta', JSON.stringify(santa));
+                        //localStorage.setItem('loggedInUser', JSON.stringify(user));
+                        //localStorage.setItem('loggedSanta', JSON.stringify(santa));
                         document.getElementById('loginForm').style.display = 'none';
                     })
                     .catch(error => console.error('Error fetching santa data:', error));
@@ -49,7 +49,7 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
                     document.getElementById('error').style.display = 'none';
                     document.getElementById('randomError').style.display = 'none';
                     document.getElementById('loginForm').style.display = 'none';
-                    localStorage.setItem('loggedInUser', JSON.stringify(user));
+                    //localStorage.setItem('loggedInUser', JSON.stringify(user));
                 } else {
                     if (!isNotRandomUser) {
                         document.getElementById('randomError').style.display = 'block';
@@ -141,7 +141,7 @@ function setPrayers(){
 
     for (let i = 1; i <= weekNr; i++) {
         let button = document.createElement('button');
-        button.textContent = `Nädal ${i}`;
+        button.textContent = `Sedel ${i}`;
         button.classList.add("prayerWeekButton");
         button.id = `prayerWeekButton${i}`
         button.addEventListener('click', () => {
@@ -188,6 +188,17 @@ async function loadPDF(fileURL){
     ctx.putImageData(adjustedImageData, 0, 0);
 
     document.getElementById('pdfCanvas').style.display = 'block'
+
+    if (isMobile()) {
+        document.getElementById("openPDFButton").style.display = "block";
+        document.getElementById("openPDFButton").addEventListener('click', function() {
+            open(fileURL);
+        })
+    } else {
+        canvas.addEventListener('click', function() {
+            open(fileURL);
+        })
+    }
 }
 
 function adjustContrast(imageData, contrast) {
@@ -202,4 +213,8 @@ function adjustContrast(imageData, contrast) {
     }
 
     return imageData;
+}
+
+function isMobile() {
+    return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
