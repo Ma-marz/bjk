@@ -114,7 +114,7 @@ function logout() {
     document.getElementById('secretSantaMenu').classList.add("active")
     document.getElementById('prayerMenu').classList.remove("active")
     document.getElementById('pdfCanvas').style.display = 'none'
-    document.getElementById("openPDFButton").style.display = "none";
+    document.getElementById("openPDFButtonDiv").style.display = "none";
 
 }
 
@@ -124,18 +124,18 @@ document.getElementById('secretSantaMenu')?.addEventListener('click', function()
     document.getElementById('secretSantaContent').style.display = 'block';
     document.getElementById('prayersContent').style.display = 'none';
     document.getElementById('pdfCanvas').style.display = 'none';
-    document.getElementById("openPDFButton").style.display = "none";
+    document.getElementById("openPDFButtonDiv").style.display = "none";
 });
 
-document.getElementById('prayerMenu')?.addEventListener('click', function() {
-    document.getElementById("openPDFButton").style.display = "none";
+document.getElementById('prayerMenu')?.addEventListener('click', async function () {
+    document.getElementById("openPDFButtonDiv").style.display = "none";
     document.getElementById('prayerMenu').classList.add("active")
     document.getElementById('secretSantaMenu').classList.remove("active")
     document.getElementById('prayersContent').style.display = 'block';
     document.getElementById('secretSantaContent').style.display = 'none';
 
     setPrayers()
-    loadPDF(`prayer/${loggedInUser.name}/Nädal ${weekNr}.pdf`)
+    await loadPDF(`prayer/${loggedInUser.name}/Nädal ${weekNr}.pdf`)
 });
 
 function setPrayers(){
@@ -148,8 +148,8 @@ function setPrayers(){
         button.textContent = `Sedel ${i}`;
         button.classList.add("prayerWeekButton");
         button.id = `prayerWeekButton${i}`
-        button.addEventListener('click', () => {
-            loadPDF(`prayer/${loggedInUser.name}/Nädal ${i}.pdf`)
+        button.addEventListener('click', async () => {
+            await loadPDF(`prayer/${loggedInUser.name}/Nädal ${i}.pdf`)
             for (let j = 1; j <= weekNr; j++) {
                 document.getElementById(`prayerWeekButton${j}`).classList.remove("active")
             }
@@ -162,8 +162,7 @@ function setPrayers(){
 }
 
 async function loadPDF(fileURL){
-    removeClicks()
-    const canvas = document.getElementById('pdfCanvas');
+    const canvas = document.createElement('canvas');
 
     const ctx = canvas.getContext('2d');
 
@@ -193,18 +192,22 @@ async function loadPDF(fileURL){
     const adjustedImageData = adjustContrast(imageData, contrast);
     ctx.putImageData(adjustedImageData, 0, 0);
 
-    document.getElementById('pdfCanvas').style.display = 'block'
+    replaceCanvasClicks(canvas);
+    removeButtonClicks()
 
     if (isMobile()) {
-        document.getElementById("openPDFButton").style.display = "block";
+        document.getElementById("openPDFButtonDiv").style.display = "block";
         document.getElementById("openPDFButton").addEventListener('click', function() {
             open(fileURL);
         })
     } else {
+        document.getElementById("openPDFButtonDiv").style.display = "none";
         canvas.addEventListener('click', function() {
             open(fileURL);
         })
     }
+
+    document.getElementById('pdfCanvas').style.display = 'block'
 }
 
 function adjustContrast(imageData, contrast) {
@@ -225,17 +228,19 @@ function isMobile() {
     return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
 
-function removeClicks() {
+function replaceCanvasClicks(canvas) {
     const canvasDiv = document.getElementById('canvasDiv');
     const oldCanvas = document.getElementById('pdfCanvas');
-    const buttonDiv = document.getElementById('openPDFButtonDiv');
-    const oldButton = document.getElementById('openPDFButton');
     oldCanvas.remove();
-    oldButton.remove();
 
-    let canvas = document.createElement("canvas");
     canvas.id = "pdfCanvas";
     canvasDiv.appendChild(canvas)
+}
+
+function removeButtonClicks() {
+    const buttonDiv = document.getElementById('openPDFButtonDiv');
+    const oldButton = document.getElementById('openPDFButton');
+    oldButton.remove();
 
     let button = document.createElement("button");
     button.id = "openPDFButton";
