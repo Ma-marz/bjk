@@ -114,6 +114,7 @@ function logout() {
     document.getElementById('secretSantaMenu').classList.add("active")
     document.getElementById('prayerMenu').classList.remove("active")
     document.getElementById('pdfCanvas').style.display = 'none'
+    document.getElementById("openPDFButton").style.display = "none";
 
 }
 
@@ -123,15 +124,18 @@ document.getElementById('secretSantaMenu')?.addEventListener('click', function()
     document.getElementById('secretSantaContent').style.display = 'block';
     document.getElementById('prayersContent').style.display = 'none';
     document.getElementById('pdfCanvas').style.display = 'none';
+    document.getElementById("openPDFButton").style.display = "none";
 });
 
 document.getElementById('prayerMenu')?.addEventListener('click', function() {
-    setPrayers()
-    loadPDF(`prayer/${loggedInUser.name}/Nädal ${weekNr}.pdf`)
+    document.getElementById("openPDFButton").style.display = "none";
     document.getElementById('prayerMenu').classList.add("active")
     document.getElementById('secretSantaMenu').classList.remove("active")
     document.getElementById('prayersContent').style.display = 'block';
     document.getElementById('secretSantaContent').style.display = 'none';
+
+    setPrayers()
+    loadPDF(`prayer/${loggedInUser.name}/Nädal ${weekNr}.pdf`)
 });
 
 function setPrayers(){
@@ -158,7 +162,9 @@ function setPrayers(){
 }
 
 async function loadPDF(fileURL){
+    removeClicks()
     const canvas = document.getElementById('pdfCanvas');
+
     const ctx = canvas.getContext('2d');
 
     // PDF.js setup
@@ -217,4 +223,22 @@ function adjustContrast(imageData, contrast) {
 
 function isMobile() {
     return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+function removeClicks() {
+    const canvasDiv = document.getElementById('canvasDiv');
+    const oldCanvas = document.getElementById('pdfCanvas');
+    const buttonDiv = document.getElementById('openPDFButtonDiv');
+    const oldButton = document.getElementById('openPDFButton');
+    oldCanvas.remove();
+    oldButton.remove();
+
+    let canvas = document.createElement("canvas");
+    canvas.id = "pdfCanvas";
+    canvasDiv.appendChild(canvas)
+
+    let button = document.createElement("button");
+    button.id = "openPDFButton";
+    button.innerHTML = "Ava sedel täisvaates"
+    buttonDiv.appendChild(button)
 }

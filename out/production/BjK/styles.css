@@ -18,7 +18,7 @@ h2 {
 
 .center {
     display: grid;
-    grid-template-columns: auto max-content max-content;
+    grid-template-columns: auto auto auto;
 }
 
 #j {
@@ -103,6 +103,17 @@ label {
     grid-template-columns: auto min-content;
 }
 
+#logoutButton {
+    background: #e4d6cc;
+}
+
+#logoutButton:hover {
+    transition-duration: 1s;
+    background: #ff98a7;
+}
+
+
+
 #randomUserName, #userName {
     font-size: 25px;
     color: chocolate;
@@ -124,7 +135,7 @@ label {
     grid-template-columns: min-content auto;
 }
 
-.menuItem {
+.menuItem, #openPDFButton {
     margin: 0 2px;
     padding: 0 10px;
     background: #e4d6cc;
@@ -137,6 +148,19 @@ label {
 .menuItem.active {
     background: #e3a274;
     top: 3px;
+}
+
+#openPDFButton {
+    width: 100vw;
+}
+
+.prayerWeekButton {
+    background: #e4d6cc;
+    border-radius: 5px;
+}
+
+.prayerWeekButton.active {
+    background: #e3a274;
 }
 
 #pdfCanvas {
