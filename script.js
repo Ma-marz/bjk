@@ -1,4 +1,4 @@
-const weekNr = 5;
+const weekNr = 6;
 loggedInUser = ""
 
 logout()
