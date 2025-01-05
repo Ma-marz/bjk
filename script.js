@@ -1,4 +1,4 @@
-const weekNr = 7;
+const weekNr = 8;
 loggedInUser = ""
 
 logout()
@@ -23,7 +23,7 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
                 // If user found, show personalized content
                 fetch('secret_santas.json')
                     .then(response => response.json())  // Parse the JSON data
-                    .then(santas => {
+                    .then(async santas => {
                         const santa = santas.find(santa => santa.santa.toLowerCase() === name.toLowerCase());
 
                         document.getElementById('realContent').style.display = 'block';
@@ -37,6 +37,7 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
                         //localStorage.setItem('loggedInUser', JSON.stringify(user));
                         //localStorage.setItem('loggedSanta', JSON.stringify(santa));
                         document.getElementById('loginForm').style.display = 'none';
+                        await openPrayersMenu()
                     })
                     .catch(error => console.error('Error fetching santa data:', error));
             } else {
@@ -128,6 +129,10 @@ document.getElementById('secretSantaMenu')?.addEventListener('click', function()
 });
 
 document.getElementById('prayerMenu')?.addEventListener('click', async function () {
+    await openPrayersMenu()
+});
+
+async function openPrayersMenu() {
     document.getElementById("openPDFButtonDiv").style.display = "none";
     document.getElementById('prayerMenu').classList.add("active")
     document.getElementById('secretSantaMenu').classList.remove("active")
@@ -136,7 +141,7 @@ document.getElementById('prayerMenu')?.addEventListener('click', async function 
 
     setPrayers()
     await loadPDF(`prayer/${loggedInUser.name}/Nädal ${weekNr}.pdf`)
-});
+}
 
 function setPrayers(){
     const prayersList = document.getElementById('prayersList');
