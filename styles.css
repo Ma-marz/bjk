@@ -22,6 +22,7 @@ h2 {
 }
 
 #j {
+    font-size: inherit;
     animation: colorChange 12s infinite; /* 10s for a full cycle, repeats infinitely */
 }
 
@@ -31,19 +32,28 @@ h2 {
         color: black; /* Black for the first 5 seconds */
     }
     80%, 100% {
-        color: lightskyblue; /* Red for the next 5 seconds */
+        color: #d2467b; /* Red for the next 5 seconds */
     }
 }
 
 #j:hover {
-    animation: none;
-    color: lightskyblue;
+    animation: sizeChange 5s ease-in-out alternate infinite;
+    color: #d2467b;
+    line-height: 24px;
+    font-size: 13px;
 }
 
 #j:hover::after {
-    transition-duration: 1s;
-    content: "a-ongi-uus-aasta";
-    color: lightskyblue;
+    content: "a täitugu Ps 147:16";
+}
+
+@keyframes sizeChange {
+    0% {
+        font-size: 11px;
+    }
+    100% {
+        font-size: 13px;
+    }
 }
 
 #content {
