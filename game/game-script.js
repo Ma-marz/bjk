@@ -26,8 +26,9 @@ character.style.width = `${p_width}px`;
 character.style.height = `${p_height}px`;
 obstacle.style.width = `${o_width}px`;
 obstacle.style.height = `${o_height}px`;
-setObsParams()
 
+setObsParams();
+obstacle.style.display = "none";
 
 
 // Character jump function
