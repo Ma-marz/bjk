@@ -29,6 +29,7 @@ obstacle.style.height = `${o_height}px`;
 
 setObsParams();
 restart();
+obstacle.style.left = `${game.offsetWidth}px`;
 
 
 // Character jump function
