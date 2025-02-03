@@ -27,10 +27,6 @@ character.style.height = `${p_height}px`;
 obstacle.style.width = `${o_width}px`;
 obstacle.style.height = `${o_height}px`;
 
-setObsParams();
-obstacle.style.left = `${game.offsetWidth}px`;
-obstacle.style.display = `none`;
-
 // Character jump function
 function jump() {
     if (isJumping) return;
@@ -66,6 +62,10 @@ function jump() {
 function moveObstacle() {
     score_board.innerText = score;
     best_score_board.innerText = best_score;
+
+    // setObsParams();
+    // obstacle.style.left = `${game.offsetWidth}px`;
+    obstacle.style.display = `none`;
 
     let obstaclePosition = game.offsetWidth;
     const obstacleInterval = setInterval(() => {
