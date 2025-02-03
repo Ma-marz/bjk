@@ -28,9 +28,8 @@ obstacle.style.width = `${o_width}px`;
 obstacle.style.height = `${o_height}px`;
 
 setObsParams();
-restart();
 obstacle.style.left = `${game.offsetWidth}px`;
-
+obstacle.style.display = `none`;
 
 // Character jump function
 function jump() {
@@ -131,10 +130,11 @@ function fixPlayerHeight() {
 function setObsParams() {
     o_width = getRandomInt(15, 40);
     o_height = getRandomInt(10, 30);
-
+    
     obstacle.style.width = `${o_width}px`;
     obstacle.style.height = `${o_height}px`;
     obstacle.style.backgroundImage = `url(game/img/${getRandomInt(1, 10)}.png)`;
+    obstacle.style.display = `block`;
 }
 
 function isLevelUp() {
@@ -188,6 +188,21 @@ function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min; // Generate random number
 }
 
+function restart() {
+    level = 1;
+    floor_height = 5;
+    obstacle.style.left = `${game.offsetWidth}px`;
+    // character.style.bottom = `${floor_height}px`;
+    game_start.style.display = 'none';
+    score_board.innerText = score;
+    best_score_board.innerText = best_score;
+    game.style.background = "#ddd";
+    speed_param = 1;
+    setTimeout(() => {
+        setObsParams();
+        gameRunning = true;
+    }, 1000);
+}
 
 // Start game
 document.addEventListener('keydown', (e) => {
@@ -210,22 +225,5 @@ document.getElementById('game').addEventListener('click', (e) => {
         restart();
     }
 });
-
-function restart() {
-    level = 1;
-    floor_height = 5;
-    obstacle.style.left = `${game.offsetWidth}px`;
-    // character.style.bottom = `${floor_height}px`;
-    game_start.style.display = 'none';
-    score_board.innerText = score;
-    best_score_board.innerText = best_score;
-    game.style.background = "#ddd";
-    speed_param = 1;
-    setTimeout(() => {
-        setObsParams();
-        gameRunning = true;
-    }, 1000);
-}
-
 
 moveObstacle();
