@@ -63,10 +63,6 @@ function moveObstacle() {
     score_board.innerText = score;
     best_score_board.innerText = best_score;
 
-    // setObsParams();
-    // obstacle.style.left = `${game.offsetWidth}px`;
-    obstacle.style.display = `none`;
-
     let obstaclePosition = game.offsetWidth;
     const obstacleInterval = setInterval(() => {
         if (!gameRunning) {
@@ -134,7 +130,6 @@ function setObsParams() {
     obstacle.style.width = `${o_width}px`;
     obstacle.style.height = `${o_height}px`;
     obstacle.style.backgroundImage = `url(game/img/${getRandomInt(1, 10)}.png)`;
-    obstacle.style.display = `block`;
 }
 
 function isLevelUp() {
@@ -189,6 +184,7 @@ function getRandomInt(min, max) {
 }
 
 function restart() {
+    obstacle.style.display = `block`;
     level = 1;
     floor_height = 5;
     obstacle.style.left = `${game.offsetWidth}px`;
@@ -226,4 +222,5 @@ document.getElementById('game').addEventListener('click', (e) => {
     }
 });
 
+obstacle.style.display = `none`;
 moveObstacle();
