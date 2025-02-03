@@ -28,7 +28,7 @@ obstacle.style.width = `${o_width}px`;
 obstacle.style.height = `${o_height}px`;
 
 setObsParams();
-obstacle.style.display = "none";
+restart();
 
 
 // Character jump function
