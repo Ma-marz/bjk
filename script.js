@@ -1,8 +1,7 @@
-const weekNr = 10;
+const weekNr = 11;
 loggedInUser = ""
 
 logout()
-test("markus", "linnu")
 
 document.getElementById('loginForm').addEventListener('submit', function(event) {
     event.preventDefault();
