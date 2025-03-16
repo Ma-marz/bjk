@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="paadike_cover.png" type="image/x-icon">
+    <link rel="icon" href="img/paadike_cover.png" type="image/x-icon">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="game/game-styles.css">
     <title>BjK</title>
 </head>
+
 
 <body>
 <div></div>
@@ -14,7 +16,8 @@
 <div id="main" class="center">
     <div></div>
   <div id="content">
-    <h2 id="bjk" >B<span id="j">j</span>K v-2.2</h2>
+
+    <h2 id="bjk" >B<span id="j">j</span>K</h2>
     <form id="loginForm">
         <div class="center">
         <div></div>
@@ -41,34 +44,42 @@
       </div>
     </form>
 
-      <div id="realContent" style="display: block;">
-          <h3>Terekest, <span id="userName"></span>!</h3>
-          <div id="contentHeader">
-              <button id="secretSantaMenu" class="menuItem active">Secret Santa</button>
-              <button id="prayerMenu" class="menuItem">Eestpalvesedelid</button>
-          </div>
-
-            <div id="secretSantaContent" style="display: block">
-              <div id="welcome" style="display: none;">
-                  <p>Isik, kellele sina kingi teed, on <span id="toName"></span>.</p>
-              </div>
-
-              <div id="randomWelcome" style="display: none;">
-                  <h4>Poleks tegelt eal arvanud, et sina siia sisse logima satud...</h4>
-                  <p>Isik, kellele sina kingi teed, on... map teagi nüüd... <span id="x"></span>.</p>
-              </div>
-            </div>
-
-          <div id="prayersContent" style="display: none">
-              <br>
-              <div id="prayersList"></div>
-              <br>
-
-          </div>
-          <div class="logout" >
-              <div></div><button id="logoutButton" >Logi välja</button>
-          </div>
+  <div id="realContent" style="display: block;">
+      <h3>Terekest, <span id="userName"></span>!</h3>
+      <div id="contentHeader">
+          <button id="prayerMenu" class="menuItem">Eestpalvesedelid</button>
+          <button id="randomMenu" class="menuItem active">BjKer Mario</button>
       </div>
+
+        <div id="randomContent" style="display: none">
+
+            <pre class="score-board">Punktid: <label id="scoreBoard"></label></pre>
+            <pre class="score-board">Parim tulemus: <label id="bestScoreBoard"></label></pre>
+            <div class="game-container" id="game">
+                <label id="game-start">Start</label>
+                <div class="character" id="character"></div>
+                <div class="obstacle" id="obstacle"></div>
+                <div class="floor" id="floor"></div>
+            </div>
+            <br>
+            <br>
+
+
+          <div id="randomWelcome" style="display: none;">
+              <h4>ERROR 404</h4>
+          </div>
+        </div>
+
+      <div id="prayersContent" style="display: none">
+          <br>
+          <div id="prayersList"></div>
+          <br>
+
+      </div>
+      <div class="logout" >
+          <div></div><button id="logoutButton" >Logi välja</button>
+      </div>
+  </div>
 
   </div>
     <div></div>
@@ -82,6 +93,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script src="script.js"></script>
+<script src="game/game-script.js"></script>
 
 </body>
 </html>

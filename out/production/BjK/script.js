@@ -1,4 +1,4 @@
-const weekNr = 4;
+const weekNr = 13;
 loggedInUser = ""
 
 logout()
@@ -23,33 +23,20 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
                 // If user found, show personalized content
                 fetch('secret_santas.json')
                     .then(response => response.json())  // Parse the JSON data
-                    .then(santas => {
+                    .then(async santas => {
                         const santa = santas.find(santa => santa.santa.toLowerCase() === name.toLowerCase());
 
                         document.getElementById('realContent').style.display = 'block';
-                        document.getElementById('welcome').style.display = 'block';
                         document.getElementById('userName').textContent = user.name;
-                        document.getElementById('toName').textContent = base64ToUtf8(santa.name);
                         document.getElementById('error').style.display = 'none';
                         document.getElementById('randomError').style.display = 'none';
-
-                        // Optionally, store user login status in local storage to remember the login
-                        //localStorage.setItem('loggedInUser', JSON.stringify(user));
-                        //localStorage.setItem('loggedSanta', JSON.stringify(santa));
                         document.getElementById('loginForm').style.display = 'none';
+                        await openPrayersMenu()
                     })
                     .catch(error => console.error('Error fetching santa data:', error));
             } else {
                 if (randomUser) {
-                    document.getElementById('realContent').style.display = 'block';
-                    document.getElementById('prayerMenu').style.display = 'none';
-                    document.getElementById('randomWelcome').style.display = 'block';
-                    document.getElementById('userName').textContent = randomUser.name;
-                    document.getElementById('x').textContent = randomUser.x;
-                    document.getElementById('error').style.display = 'none';
-                    document.getElementById('randomError').style.display = 'none';
-                    document.getElementById('loginForm').style.display = 'none';
-                    //localStorage.setItem('loggedInUser', JSON.stringify(user));
+                    alert("ERROR 404")
                 } else {
                     if (!isNotRandomUser) {
                         document.getElementById('randomError').style.display = 'block';
@@ -99,7 +86,6 @@ function logout() {
     localStorage.removeItem('loggedInUser');
     localStorage.removeItem('loggedSanta');
     // Hide welcome message and show login form
-    document.getElementById('welcome').style.display = 'none';
     document.getElementById('randomWelcome').style.display = 'none';
     document.getElementById('loginForm').style.display = 'block';
     document.getElementById('error').style.display = 'none';
@@ -107,36 +93,40 @@ function logout() {
     document.getElementById('password').textContent = null;
 
     document.getElementById('realContent').style.display = 'none';
-    document.getElementById('secretSantaContent').style.display = 'block';
+    document.getElementById('randomContent').style.display = 'block';
     document.getElementById('prayersContent').style.display = 'none';
     document.getElementById('prayerMenu').style.display = 'block';
 
-    document.getElementById('secretSantaMenu').classList.add("active")
+    document.getElementById('randomMenu').classList.add("active")
     document.getElementById('prayerMenu').classList.remove("active")
     document.getElementById('pdfCanvas').style.display = 'none'
     document.getElementById("openPDFButtonDiv").style.display = "none";
 
 }
 
-document.getElementById('secretSantaMenu')?.addEventListener('click', function() {
-    document.getElementById('secretSantaMenu').classList.add("active")
+document.getElementById('randomMenu')?.addEventListener('click', function() {
+    document.getElementById('randomMenu').classList.add("active")
     document.getElementById('prayerMenu').classList.remove("active")
-    document.getElementById('secretSantaContent').style.display = 'block';
+    document.getElementById('randomContent').style.display = 'block';
     document.getElementById('prayersContent').style.display = 'none';
     document.getElementById('pdfCanvas').style.display = 'none';
     document.getElementById("openPDFButtonDiv").style.display = "none";
 });
 
 document.getElementById('prayerMenu')?.addEventListener('click', async function () {
+    await openPrayersMenu()
+});
+
+async function openPrayersMenu() {
     document.getElementById("openPDFButtonDiv").style.display = "none";
     document.getElementById('prayerMenu').classList.add("active")
-    document.getElementById('secretSantaMenu').classList.remove("active")
+    document.getElementById('randomMenu').classList.remove("active")
     document.getElementById('prayersContent').style.display = 'block';
-    document.getElementById('secretSantaContent').style.display = 'none';
+    document.getElementById('randomContent').style.display = 'none';
 
     setPrayers()
     await loadPDF(`prayer/${loggedInUser.name}/Nädal ${weekNr}.pdf`)
-});
+}
 
 function setPrayers(){
     const prayersList = document.getElementById('prayersList');
@@ -144,6 +134,9 @@ function setPrayers(){
     let lastButton;
 
     for (let i = 1; i <= weekNr; i++) {
+        if (i > 1 && i % 9 === 1) {
+            prayersList.appendChild(document.createElement('hr'));
+        }
         let button = document.createElement('button');
         button.textContent = `Sedel ${i}`;
         button.classList.add("prayerWeekButton");
@@ -246,4 +239,13 @@ function removeButtonClicks() {
     button.id = "openPDFButton";
     button.innerHTML = "Ava sedel täisvaates"
     buttonDiv.appendChild(button)
+}
+
+
+function test(username, password) {
+    let n = document.getElementById('name');
+    let p = document.getElementById('password');
+
+    n.innerText = username;
+    p.innerText = password;
 }

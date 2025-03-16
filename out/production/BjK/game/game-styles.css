@@ -1,0 +1,45 @@
+.game-container {
+    position: relative;
+    width: auto;
+    height: 100px;
+    background: #ddd;
+    border: 2px solid #333;
+    overflow: hidden;
+
+    margin: 0;
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.character {
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+    width: 10px;
+    height: 15px;
+    background-color: #d90f5d;
+    background-image: url('img/mario.png');
+    background-size: cover;
+    border-radius: 4px;
+}
+.obstacle {
+    position: absolute;
+    bottom: 5px;
+    right: -50px;
+    width: 10px;
+    height: 10px;
+    background-color: #333333;
+    /*background-image: url('your-obstacle-image.png'); /* Replace with your image */
+    background-size: cover;
+    border-radius: 2px;
+}
+
+.floor {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 100%;
+    height: 5px;
+    background-color: #333333;
+}

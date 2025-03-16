@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snake Game</title>
+  <style>
+    html, body {
+      height: 100vh;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: wheat;
+    }
+
+    canvas {
+      border: 2px solid white;
+      background: black;
+    }
+
+    .buttons {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #333;
+      padding: 10px;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: center;
+    }
+
+    .g-b {
+      width: 70px;
+      height: 60px;
+      margin: 5px;
+      font-size: 16px;
+      background: lightgray;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .pressed {
+      background: darkgray !important;
+      transform: scale(0.95);
+    }
+  </style>
+</head>
+<body>
+<span><b>Ussi pikkus: <span id="score">0</span> [max <span id="max-score">0</span>]<span id="extra-info"></span></b></span>
+<canvas width="300" height="300" id="game"></canvas>
+
+<div class="buttons">
+  <div class="row">
+    <button id="b-up" class="g-b">▲</button>
+  </div>
+  <div class="row">
+    <button id="b-left" class="g-b">◄</button>
+    <button id="b-down" class="g-b">▼</button>
+    <button id="b-right" class="g-b">►</button>
+  </div>
+</div>
+
+<script>
+  var canvas = document.getElementById('game');
+  var context = canvas.getContext('2d');
+
+  var grid = 15;
+  var count = 0;
+
+  var snake = {
+    x: grid * 10,
+    y: grid * 10,
+    dx: grid,
+    dy: 0,
+    cells: [],
+    maxCells: 4
+  };
+
+  var maxSnakeLength = 4;
+
+  var apple = {
+    x: grid * 3,
+    y: grid * 3
+  };
+
+  function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min)) + min;
+  }
+
+  function loop() {
+    requestAnimationFrame(loop);
+    if (++count < 8) return;
+    count = 0;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+
+    snake.x += snake.dx;
+    snake.y += snake.dy;
+
+    if (snake.x < 0) snake.x = canvas.width - grid;
+    else if (snake.x >= canvas.width) snake.x = 0;
+
+    if (snake.y < 0) snake.y = canvas.height - grid;
+    else if (snake.y >= canvas.height) snake.y = 0;
+
+    snake.cells.unshift({ x: snake.x, y: snake.y });
+    if (snake.cells.length > snake.maxCells) snake.cells.pop();
+
+    context.fillStyle = 'red';
+    context.fillRect(apple.x, apple.y, grid - 1, grid - 1);
+
+    context.fillStyle = 'green';
+    snake.cells.forEach((cell, index) => {
+      context.fillRect(cell.x, cell.y, grid - 1, grid - 1);
+
+      if (cell.x === apple.x && cell.y === apple.y) {
+        snake.maxCells++;
+
+        // Update max length if it's a new record
+        if (snake.maxCells > maxSnakeLength) {
+          maxSnakeLength = snake.maxCells;
+        }
+
+        // Update UI
+        document.getElementById("score").textContent = snake.maxCells;
+        if (snake.maxCells > 3) {
+          document.getElementById("extra-info").textContent = " * pikem kui Stefan";
+        }
+
+        // Generate new apple position
+        apple.x = getRandomInt(0, 20) * grid;
+        apple.y = getRandomInt(0, 20) * grid;
+      }
+
+
+      for (let i = index + 1; i < snake.cells.length; i++) {
+        if (cell.x === snake.cells[i].x && cell.y === snake.cells[i].y) {
+          snake.x = grid * 5;
+          snake.y = grid * 5;
+          snake.cells = [];
+          snake.maxCells = 4;
+          snake.dx = grid;
+          snake.dy = 0;
+
+          apple.x = getRandomInt(0, 20) * grid;
+          apple.y = getRandomInt(0, 20) * grid;
+
+          document.getElementById("score").textContent = 4;
+          document.getElementById("max-score").textContent = maxSnakeLength;
+        }
+      }
+    });
+  }
+
+  function pressButton(button) {
+    button.classList.add('pressed');
+  }
+
+  function releaseButton(button) {
+    button.classList.remove('pressed');
+  }
+
+  const keyMap = {
+    37: { button: 'b-left', dx: -grid, dy: 0 },
+    38: { button: 'b-up', dx: 0, dy: -grid },
+    39: { button: 'b-right', dx: grid, dy: 0 },
+    40: { button: 'b-down', dx: 0, dy: grid }
+  };
+
+  document.addEventListener('keydown', (e) => {
+    if (keyMap[e.which]) {
+      let { button, dx, dy } = keyMap[e.which];
+      if ((dx !== 0 && snake.dx === 0) || (dy !== 0 && snake.dy === 0)) {
+        snake.dx = dx;
+        snake.dy = dy;
+        pressButton(document.getElementById(button));
+      }
+    }
+  });
+
+  document.addEventListener('keyup', (e) => {
+    if (keyMap[e.which]) {
+      releaseButton(document.getElementById(keyMap[e.which].button));
+    }
+  });
+
+  function handleButtonPress(buttonId, dx, dy) {
+    if ((dx !== 0 && snake.dx === 0) || (dy !== 0 && snake.dy === 0)) {
+      snake.dx = dx;
+      snake.dy = dy;
+      pressButton(document.getElementById(buttonId));
+      setTimeout(() => releaseButton(document.getElementById(buttonId)), 150);
+    }
+  }
+
+  document.getElementById('b-up').addEventListener('click', () => handleButtonPress('b-up', 0, -grid));
+  document.getElementById('b-down').addEventListener('click', () => handleButtonPress('b-down', 0, grid));
+  document.getElementById('b-left').addEventListener('click', () => handleButtonPress('b-left', -grid, 0));
+  document.getElementById('b-right').addEventListener('click', () => handleButtonPress('b-right', grid, 0));
+
+  requestAnimationFrame(loop);
+</script>
+
+</body>
+</html>
