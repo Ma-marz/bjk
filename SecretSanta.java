@@ -47,11 +47,14 @@ public class SecretSanta {
 
         json.append("]");
 
+        // UNCOMMENT TO USE
+        /*
         try (FileWriter file = new FileWriter("secret_santas.json")) {
             file.write(json.toString());  // Pretty print with an indent of 4 spaces
             System.out.println("Successfully written JSON to secret_santas.json");
         } catch (IOException e) {
             e.printStackTrace();
         }
+        */
     }
 }
