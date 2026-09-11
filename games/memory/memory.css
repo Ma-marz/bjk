@@ -1,0 +1,57 @@
+/* Memory game styles */
+.memory-board {
+  display: grid;
+  gap: 8px;
+  justify-content: center;
+}
+.memory-card {
+  width: 72px;
+  height: 96px;
+  border-radius: 8px;
+  perspective: 800px;
+  cursor: pointer;
+}
+.memory-card .inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.45s cubic-bezier(.2,.8,.2,1);
+}
+.memory-card.flipped .inner {
+  transform: rotateY(180deg);
+}
+.memory-card .face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.memory-card .face.back {
+  background: linear-gradient(180deg, #efe5c8, #e6d9b0);
+  border: 1px solid rgba(60,40,20,0.12);
+}
+.memory-card .face.front {
+  transform: rotateY(180deg);
+  background: white;
+}
+.memory-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.memory-controls {
+  display:flex;
+  gap:10px;
+  align-items:center;
+  justify-content:space-between;
+  margin:8px 0;
+}
+@media (min-width:520px) {
+  .memory-board { gap:12px; }
+  .memory-card { width:96px; height:128px; }
+}

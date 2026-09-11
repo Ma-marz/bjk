@@ -1,99 +1,233 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="et">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="BjK">
     <link rel="icon" href="img/paadike_cover.png" type="image/x-icon">
-    <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="game/game-styles.css">
+    <link rel="stylesheet" href="games/memory/memory.css">
+    <link rel="stylesheet" href="styles.css">
     <title>BjK</title>
 </head>
-
-
 <body>
-<div></div>
-
-<div id="main" class="center">
-    <div></div>
-  <div id="content">
-
-    <h2 id="bjk" >B<span id="j">j</span>K</h2>
-    <form id="loginForm">
-        <div class="center">
-        <div></div>
-        <div>
-            <label for="name">Nimi:</label><br>
-            <input type="text" id="name" name="firstname" required><br><br>
-
-            <label for="password">Salasõna:</label><br>
-            <input type="text" id="password" name="password" ><br><br>
-        </div>
-        <div></div>
-        </div>
-      <div id="error" >See pole õige salasõna!</div>
-
-      <div id="randomError" >
-        <p>
-            Aga see pole ju isegi mitte ühegi BjK'i liikme eesnimi??? <br>
-            Sa võid ju proovida mingeid nimesi katsetada, kes teab, mida kõike siia on progega peidetud...
-        </p>
-      </div>
-
-      <div id="login">
-        <div></div><button type="submit">Sisene</button>
-      </div>
-    </form>
-
-  <div id="realContent" style="display: block;">
-      <h3>Terekest, <span id="userName"></span>!</h3>
-      <div id="contentHeader">
-          <button id="prayerMenu" class="menuItem">Eestpalvesedelid</button>
-          <button id="randomMenu" class="menuItem active">BjKer Mario</button>
-      </div>
-
-        <div id="randomContent" style="display: none">
-
-            <pre class="score-board">Punktid: <label id="scoreBoard"></label></pre>
-            <pre class="score-board">Parim tulemus: <label id="bestScoreBoard"></label></pre>
-            <div class="game-container" id="game">
-                <label id="game-start">Start</label>
-                <div class="character" id="character"></div>
-                <div class="obstacle" id="obstacle"></div>
-                <div class="floor" id="floor"></div>
+    <svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+        <symbol id="icon-compass" viewBox="0 0 32 32"><circle cx="16" cy="16" r="13"/><path d="m22 10-4 8-8 4 4-8Z"/><path d="M16 1v4m15 11h-4M16 31v-4M1 16h4"/></symbol>
+        <symbol id="icon-book" viewBox="0 0 32 32"><path d="M16 8C12 4 5 5 3 6v20c5-2 9-1 13 2 4-3 8-4 13-2V6c-2-1-9-2-13 2Zm0 0v20M7 11l5 1m-5 5 5 1m8-6 5-1m-5 7 5-1"/></symbol>
+        <symbol id="icon-letter" viewBox="0 0 32 32"><rect x="3" y="6" width="26" height="20" rx="1"/><path d="m3 7 13 11L29 7M3 26l9-10m17 10-9-10"/></symbol>
+        <symbol id="icon-key" viewBox="0 0 32 32"><circle cx="11" cy="11" r="7"/><path d="m16 16 12 12m-6-6 4-4m0 8 4-4"/></symbol>
+        <symbol id="icon-flag" viewBox="0 0 32 32"><path d="M7 29V4m0 1c7-5 11 6 19 0v14c-8 6-12-5-19 0M3 29h8"/></symbol>
+    </defs></svg>
+    <div class="page-shell">
+        <header class="topbar">
+            <div class="brand-wrap">
+                <svg class="brand-compass icon" aria-hidden="true"><use href="#icon-compass"/></svg><div><div class="brand-mark">B<span>j</span>K</div><div class="brand-caption">ühe Isa lapsed</div></div>
             </div>
-            <br>
-            <br>
+            <div class="topbar-actions">
+                <span id="sessionBadge" class="session-badge hidden"></span>
+                <button id="logoutButton" class="ghost-button hidden" type="button">Logi välja</button>
+            </div>
+        </header>
 
+        <div id="pageActivity" class="data-activity hidden" role="status" aria-live="polite" aria-atomic="true"><span id="pageActivityText"></span><button id="retryDataButton" class="ghost-button hidden" type="button">Laadi uuesti</button></div>
+        <main class="app-main">
+            <section id="loginScreen" class="panel auth-panel">
+                <div class="auth-map"><span class="eyebrow">BjK liikmete portaal</span><h1>Ef 6:18</h1><p>Ja palve ja anumisega palvetage igal ajal Vaimus ning selleks valvake kogu püsivusega ja eestpalvetega kõigi pühade eest</p><span class="map-coordinate">59° N &nbsp; / &nbsp; 24° E</span></div>
+                <div class="auth-content"><div class="panel-header"><span class="eyebrow">Tere tulemast tagasi</span><h2>Astu sisse</h2><p>Ma ütlen aga teile, et paljud tulevad idast ja läänest ning istuvad lauda Aabrahami ja Iisaki ja Jaakobiga taevariigis<br>(Mt 8:11)</p></div>
 
-          <div id="randomWelcome" style="display: none;">
-              <h4>ERROR 404</h4>
-          </div>
-        </div>
+                <form id="loginForm" class="auth-form">
+                    <label for="name">Nimi</label>
+                    <input id="name" name="name" type="text" autocomplete="username" required>
 
-      <div id="prayersContent" style="display: none">
-          <br>
-          <div id="prayersList"></div>
-          <br>
+                    <label for="password">Salasõna</label>
+                    <input id="password" name="password" type="password" autocomplete="current-password" required>
 
-      </div>
-      <div class="logout" >
-          <div></div><button id="logoutButton" >Logi välja</button>
-      </div>
-  </div>
+                    <div id="loginLoading" class="hidden" aria-hidden="true"></div>
+                    <button id="loginButton" type="submit" class="primary-button">Sisene</button>
+                </form>
 
-  </div>
-    <div></div>
-    <br>
-    <div class="center">
-        <div></div><div id="openPDFButtonDiv" style="display: none"><button id="openPDFButton"></button></div><div></div>
+                <div id="error" class="message error hidden">Vale kasutajanimi või salasõna.</div>
+                <div id="randomError" class="message info hidden">
+                    Sellist kasutajat ei leitud. Küsige ligipääsu või kontrollige õigekirja.
+                </div>
+                </div>
+            </section>
+
+            <section id="appScreen" class="hidden">
+                <nav id="mainNav" class="main-nav" aria-label="Põhimenüü">
+                    <button type="button" class="nav-button active" data-view="prayers" aria-label="Eestpalvesedelid"><svg class="icon" aria-hidden="true"><use href="#icon-book"/></svg><span>Palvesedelid</span></button>
+                    <button type="button" class="nav-button" data-view="messages" aria-label="Sõnumid"><svg class="icon" aria-hidden="true"><use href="#icon-letter"/></svg><span>Sõnumid</span></button>
+                    <button type="button" class="nav-button" data-view="games" aria-label="Mängud"><svg class="icon" aria-hidden="true"><use href="#icon-compass"/></svg><span>Mängud</span></button>
+                    <button type="button" class="nav-button" data-view="settings" aria-label="Seaded"><svg class="icon" aria-hidden="true"><use href="#icon-key"/></svg><span>Seaded</span></button>
+                </nav>
+
+                <div id="view-prayers" class="view-panel active">
+                    <div class="section-heading">
+                        <div><span class="eyebrow">Kelle eest palvetad sa sellel nädalal?</span><h2>Eestpalvesedelid</h2><p>Ära unusta sellele inimesele nädala lõpus kirjutada. Me kõik igatseme teada, et meie eest palvetatakse :)</p></div><svg class="heading-compass icon" aria-hidden="true"><use href="#icon-compass"/></svg>
+                    </div>
+
+                    <div class="prayer-toolbar">
+                        <label for="prayerSelect" class="visually-hidden">Vali sedel</label>
+                        <select id="prayerSelect" class="prayer-select"></select>
+                    </div>
+
+                    <div id="prayerEmptyState" class="prayer-empty hidden" aria-live="polite">
+                        Hetkel palvesedelid puuduvad.
+                    </div>
+
+                    <div class="pdf-viewer-shell">
+                        <img id="prayerImage" class="prayer-image hidden" alt="Eestpalvesedel" decoding="async">
+                        <iframe id="localPdfFrame" class="local-pdf-frame hidden" title="Eestpalvesedel"></iframe>
+                    </div>
+
+                    <div id="openPDFButtonDiv" class="mobile-open hidden">
+                        <button id="openPDFButton" type="button" class="primary-button">Ava PDF uuel lehel</button>
+                    </div>
+                </div>
+
+                <div id="view-messages" class="view-panel hidden">
+                    <div class="section-heading">
+                        <div><span class="eyebrow"></span><h2>Kirjakast</h2><p>Aga kes prohvetlikult kõneleb, see kõneleb inimestele nende ehitamiseks ja julgustamiseks ja lohutamiseks.<br>(1.Kor 14:3)</p></div><svg class="heading-compass icon" aria-hidden="true"><use href="#icon-compass"/></svg>
+                    </div>
+
+                    <form id="messageForm" class="message-form"><!-- <h3></h3> -->
+                        <label for="recipientSelect">Saaja</label>
+                        <select id="recipientSelect">
+                            <option value="" disabled selected>Vali saaja</option>
+                        </select>
+
+                        <label for="messageText">Sõnum</label>
+                        <textarea id="messageText" rows="4" maxlength="500" placeholder="Kirjuta sõnum..."></textarea>
+
+                        <div id="messageFormError" class="message error hidden" aria-live="polite"></div>
+                        <div id="messageFormLoading" class="hidden" aria-hidden="true"></div>
+                        <button id="sendMessageButton" type="submit" class="primary-button">Saada</button>
+                    </form>
+
+                    <!-- Mobile tabs (shown on small screens) -->
+                    <div id="messageTabs" class="message-tabs hidden" role="tablist">
+                        <button id="msgTabReceived" class="tab-button active" type="button" role="tab" aria-selected="true">Saabunud</button>
+                        <button id="msgTabSent" class="tab-button" type="button" role="tab" aria-selected="false">Saadetud</button>
+                    </div>
+
+                    <div class="message-columns">
+                        <div id="receivedBox" class="message-box">
+                            <h3>Saabunud</h3>
+                            <div id="receivedMessages" class="message-list"></div>
+                        </div>
+                        <div id="sentBox" class="message-box">
+                            <h3>Saadetud</h3>
+                            <div id="sentMessages" class="message-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="view-games" class="view-panel hidden">
+                    <div class="section-heading">
+                        <div><span class="eyebrow">Väike kõrvalepõige</span><h2>Seiklused vanaisa Markusega</h2><p>Pane proovile oma mälu ja osavus.</p></div><svg class="heading-compass icon" aria-hidden="true"><use href="#icon-compass"/></svg>
+                    </div>
+
+                    <!-- Games list (cards) -->
+                    <div id="gamesList" class="games-list">
+                        <article class="game-card" data-game="bjker-mario">
+                            <div class="game-card-art art-mario"><span class="map-chapter">I</span><svg class="icon" aria-hidden="true"><use href="#icon-flag"/></svg><span class="trail-label">need jooksevad ega tüdi</span></div>
+                            <h3>BjKer Mario</h3>
+                            <p class="muted">Legendaarne mäng, millest ühel päeval lastelastelegi jutustame.</p>
+                            <button class="primary-button play-game-button" data-game="bjker-mario">Hüppa mängu! <span aria-hidden="true">↗</span></button>
+                        </article>
+
+                        <article class="game-card" data-game="bjk-memory">
+                            <div class="game-card-art art-memory"><span class="map-chapter">II</span><svg class="icon" aria-hidden="true"><use href="#icon-compass"/></svg><span class="trail-label">mäletagi, miks ma üldse siia tulin</span></div>
+                            <h3>BjK Memory</h3>
+                            <p class="muted">Vanadust näitavad kaks asja;<br>esiteks hakkab mälu kehvenema,<br>teine ei tule praegu meelde...</p>
+                            <button class="primary-button play-game-button" data-game="bjk-memory">Kas sina mäletad? <span aria-hidden="true">↗</span></button>
+                        </article>
+                    </div>
+
+                    <!-- BjKer Mario subview (kept intact) -->
+                    <div id="subview-bjker-mario" class="game-subview hidden">
+                        <div class="game-header">
+                            <button class="ghost-button back-to-games">‹ Tagasi</button>
+                            <h3>BjKer Mario</h3>
+                        </div>
+                        <div class="game-summary">
+                            <div class="stat-pill">Punktid: <strong id="scoreBoard">0</strong></div>
+                            <div class="stat-pill">Parim tulemus: <strong id="bestScoreBoard">0</strong></div>
+                        </div>
+                        <div class="game-container" id="game">
+                            <div class="sky-overlay"></div>
+                            <div class="game-cloud cloud-1"></div>
+                            <div class="game-cloud cloud-2"></div>
+                            <div class="game-cloud cloud-3"></div>
+                            <label id="game-start">Puuduta, et alustada</label>
+                            <div class="character" id="character"></div>
+                            <div class="obstacle" id="obstacle"></div>
+                            <div class="floor" id="floor"></div>
+                        </div>
+
+                        <div class="leaderboard-card">
+                            <h3>Parimad hüppajad (ja suurimad häkkerid?)</h3>
+                            <ol id="leaderboardList" class="leaderboard-list"></ol>
+                        </div>
+                    </div>
+
+                    <!-- BjK Memory subview -->
+                    <div id="subview-bjk-memory" class="game-subview hidden">
+                        <div class="game-header">
+                            <button class="ghost-button back-to-games">‹ Tagasi</button>
+                            <h3>BjK Memory</h3>
+                        </div>
+                        <div id="memoryControls" class="panel">
+                            <div class="memory-stats">
+                                <div>Aeg: <strong id="memoryTime">0.00</strong>s</div>
+                                <div>Katseid: <strong id="memoryAttempts">0</strong></div>
+                            </div>
+                            <div id="memoryBoard" class="memory-board"></div>
+                            <div class="memory-actions">
+                                <button id="memoryRestart" class="primary-button">Alusta uuesti</button>
+                            </div>
+                        </div>
+
+                        <div class="leaderboard-card">
+                            <h3>BjK vanuseline järjekord kasvavas suunas ;)</h3>
+                            <ol id="leaderboard-bjk-memory" class="leaderboard-list"></ol>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div id="view-settings" class="view-panel hidden">
+                    <div class="section-heading">
+                        <div><span class="eyebrow">Sinu konto</span><h2>Seaded</h2><p>Hetkel siin suurt midagi seadistada ei saagi, aga äkki ühel päeval avaneb võimalus...</p></div><svg class="heading-compass icon" aria-hidden="true"><use href="#icon-compass"/></svg>
+                    </div>
+                    <div class="settings-card">
+                        <h3>Parooli vahetamine</h3>
+                        <form id="passwordForm" class="settings-form">
+                            <label for="currentPassword">Praegune salasõna</label>
+                            <input id="currentPassword" type="password" required>
+
+                            <label for="newPassword">Uus salasõna</label>
+                            <input id="newPassword" type="password" required>
+
+                            <label for="confirmPassword">Korda uut salasõna</label>
+                            <input id="confirmPassword" type="password" required>
+
+                            <div id="passwordFormLoading" class="hidden" aria-hidden="true"></div>
+                            <button id="passwordButton" type="submit" class="primary-button">Uuenda salasõna</button>
+                        </form>
+                        <div id="passwordMessage" class="message success hidden"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+        <footer class="site-footer"><span>BjK</span><span>nojeh, kes see nimetab oma sõpruspundi Balta järgi?</span></footer>
     </div>
-</div>
 
-<div id="canvasDiv"><canvas id="pdfCanvas"></canvas></div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-<script src="script.js"></script>
-<script src="game/game-script.js"></script>
-
+    <script>
+        window.BJK_GOOGLE_SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyLxmjiXWl0iIyQETwYdczPXraSf9Y8sYpPUs5C7SLaJrYGDKuG0-I6oLK3OcZbND_Z/exec';
+    </script>
+    <script src="script.js"></script>
+    <script src="games/memory/memory.js"></script>
+    <script src="game/game-script.js"></script>
 </body>
 </html>
