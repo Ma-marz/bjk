@@ -77,6 +77,7 @@ textarea { min-height: 130px; resize: vertical; }
 .message-box.active { display: block; }
 .message-item { border-top: 1px solid #c8b38f; padding: 14px 0; overflow-wrap: anywhere; font-size: 15px; }
 .message-item strong { font-weight: normal; color: #775032; }
+.message-item > div { white-space: pre-wrap; }
 .message-item small { display: block; color: var(--muted); font: 11px system-ui, sans-serif; margin-top: 8px; }
 .settings-card { max-width: 620px; }
 .games-list { display: grid; gap: 22px; }
@@ -112,14 +113,13 @@ textarea { min-height: 130px; resize: vertical; }
 .message { padding: 12px 14px; margin-top: 16px; font: 13px/1.5 system-ui, sans-serif; border-left: 3px solid #a3814e; background: #e9d9b9; overflow-wrap: anywhere; }
 .message.error { color: #792e21; border-color: #994e39; background: #f1dfce; }
 .message.success { color: #45502e; border-color: #7c865b; }
-.data-activity { position: fixed; z-index: 30; left: 16px; right: 16px; bottom: calc(88px + env(safe-area-inset-bottom)); max-width: 520px; margin: 0 auto; padding: 13px 17px; font-size: 12px; line-height: 1.5; border: 1px solid #a78b61; background: #fff3da; color: #4c3622; box-shadow: 0 8px 25px #35211126; border-radius: 5px; pointer-events: auto; }
+.data-activity { position: fixed; z-index: 30; left: 16px; right: 16px; top: calc(16px + env(safe-area-inset-top)); max-width: 520px; margin: 0 auto; padding: 13px 17px; font-size: 12px; line-height: 1.5; border: 1px solid #a78b61; background: #fff3da; color: #4c3622; box-shadow: 0 8px 25px #35211126; border-radius: 5px; pointer-events: auto; }
 .data-activity::before { content: '✓'; margin-right: 9px; font-weight: bold; }
 .data-activity[data-state="loading"]::before { content: ''; display: inline-block; width: 12px; height: 12px; border: 2px solid #cab591; border-top-color: #694427; border-radius: 50%; vertical-align: -2px; animation: spin 1s linear infinite; }
 .data-activity[data-state="error"]::before, .data-activity[data-state="pending"]::before { content: '!'; }
 .data-activity[data-state="error"], .data-activity[data-state="pending"] { background: #f7e3cc; border-color: #a5653d; }
 .site-footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 0 18px; padding: 18px 0 105px; border-top: 1px solid var(--border); font-size: 9px; text-transform: uppercase; letter-spacing: .09em; color: #88704f; }
 body:has(#appScreen.hidden) .site-footer { padding-bottom: 24px; }
-body:has(#appScreen.hidden) .data-activity { bottom: 20px; }
 .members-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); }
 .member-card { border: 1px solid var(--border); padding: 18px; }
 .member-top { display: flex; gap: 12px; }
@@ -159,7 +159,7 @@ body:has(#appScreen.hidden) .data-activity { bottom: 20px; }
   .auth-map h1 { margin-top: 65px; }
   .auth-content { align-self: center; padding: 48px; }
   .site-footer { margin: 0 42px; padding-bottom: 24px; }
-  .data-activity { bottom: 28px; }
+  .data-activity { top: calc(28px + env(safe-area-inset-top)); }
   .game-subview { max-width: 900px; }
 }
 @media (prefers-reduced-motion: reduce) {

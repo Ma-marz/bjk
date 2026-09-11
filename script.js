@@ -891,14 +891,9 @@ async function performAppsScriptRequest(action, payload = {}) {
         return { success: false, error: 'Google Sheets endpoint is not configured.' };
     }
 
-    const storedSession = readSessionState();
-    if (storedSession && storedSession.token) {
-        appState.sessionToken = storedSession.token;
-    }
-
     const body = {
         action,
-        token: appState.sessionToken || storedSession?.token || '',
+        token: appState.sessionToken || '',
         ...payload
     };
 

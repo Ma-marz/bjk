@@ -18,7 +18,7 @@ const DEFAULT_USERS = [
   { name: 'Katariina', password: 'ma<3suema', role: 'user', active: true },
   { name: 'Anett', password: 'ane', role: 'user', active: true },
   { name: 'Karolina', password: 'Kollaneauto', role: 'user', active: true }
-};
+];
 
 function getSpreadsheet() {
   if (!SPREADSHEET_ID || SPREADSHEET_ID === 'PASTE_YOUR_SHEET_ID_HERE') {
@@ -164,8 +164,8 @@ function getSessionByToken(token) {
   const session = findRowByColumn('Sessions', 'token', token);
   if (!session) return null;
   const expiresAt = new Date(session.expiresAt || 0).getTime();
-  if (expiresAt && expiresAt < Date.now()) {
-    deleteSessionByToken(token);
+  // Validation is read-only: deleting rows here can race another request.
+  if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
     return null;
   }
   return session;
@@ -180,11 +180,11 @@ function deleteSessionByToken(token) {
   }
 }
 
-function deleteSessionsForUser(userId) {
+function deleteSessionsForUser(userId, keepToken) {
   const sheet = ensureSchema('Sessions');
   const rows = getSheetRows('Sessions');
   const indexes = rows
-    .map((row, index) => (row.userId === userId ? index + 2 : null))
+    .map((row, index) => (row.userId === userId && row.token !== keepToken ? index + 2 : null))
     .filter((rowNumber) => rowNumber !== null)
     .reverse();
   indexes.forEach((rowNumber) => sheet.deleteRow(rowNumber));
@@ -499,7 +499,11 @@ function callWithLock(actionName, callback) {
   try {
     return callback();
   } finally {
-    lock.releaseLock();
+    try {
+      SpreadsheetApp.flush();
+    } finally {
+      lock.releaseLock();
+    }
   }
 }
 
@@ -517,7 +521,6 @@ function doGet() {
       users: getUsersList(),
       messages: getSheetRows('Messages'),
       scores: getSheetRows('Scores'),
-      sessions: getSheetRows('Sessions'),
       settings: getSheetRows('Settings')
     };
     return ContentService.createTextOutput(JSON.stringify(state)).setMimeType(ContentService.MimeType.JSON);
@@ -546,8 +549,8 @@ function doPost(e) {
       if (user.passwordHash !== suppliedHash) {
         return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Invalid username or password.' })).setMimeType(ContentService.MimeType.JSON);
       }
-      deleteSessionsForUser(user.id);
-      const nextToken = createSession(user.id);
+      // Each browser/device has its own token; login must not revoke others.
+      const nextToken = callWithLock('login', () => createSession(user.id));
       return ContentService.createTextOutput(JSON.stringify({
         success: true,
         data: {
@@ -564,7 +567,7 @@ function doPost(e) {
       if (!sessionUser) {
         return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Invalid session.' })).setMimeType(ContentService.MimeType.JSON);
       }
-      deleteSessionByToken(token);
+      callWithLock('logout', () => deleteSessionByToken(token));
       return ContentService.createTextOutput(JSON.stringify({ success: true, data: { loggedOut: true } })).setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -601,7 +604,8 @@ function doPost(e) {
         const user = getUserById(sessionUser.id);
         if (!user) return { success: false, error: 'User not found.' };
         const updated = updateUserRecord(user.id, { passwordHash: hashPassword(newPassword) });
-        deleteSessionsForUser(user.id);
+        // A password change revokes other devices, but keeps this one usable.
+        deleteSessionsForUser(user.id, token);
         return { success: true, data: { user: toSafeUser(updated), updated: true } };
       });
       return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
