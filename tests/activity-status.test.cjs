@@ -21,11 +21,12 @@ test('concurrent game loads and score save produce one concise notice', () => {
   assert.equal(el.dataset.state, 'loading');
   c.window.reportScoreStatus('bjk-memory', 'saved', 'Tulemus salvestatud.');
   assert.equal(el.dataset.state, 'ready');
+  assert.equal(el.hidden, true);
 });
-test('success disappears; failed and pending saves remain visible', () => {
+test('success is immediately hidden; failed and pending saves remain visible', () => {
   const { c, el, expire } = setup();
   c.beginDataActivity('games', 'Loading…')();
-  assert.equal(el.hidden, false);
+  assert.equal(el.hidden, true);
   expire();
   assert.equal(el.hidden, true);
   c.beginDataActivity('games', 'Loading…')(true);
@@ -58,4 +59,18 @@ test('failed load exposes retry; starting retry hides the button', async () => {
   await button.onclick();
   assert.equal(retried, true);
   assert.equal(button.hidden, true);
+});
+
+test('dismissal survives rerenders without cancelling work and new results appear', () => {
+  const { c, el } = setup();
+  const finish = c.beginDataActivity('games', 'Loading…');
+  c.dismissDataActivity();
+  c.renderDataActivity();
+  assert.equal(el.hidden, true);
+  finish(true);
+  assert.equal(el.hidden, false);
+  assert.equal(el.dataset.state, 'error');
+  c.dismissDataActivity();
+  c.setActivityResult('games', true, 'Andmete uuendamine ebaõnnestus. Proovi uuesti.');
+  assert.equal(el.hidden, false);
 });

@@ -85,7 +85,7 @@ function setSkyMode(isNight) {
 
 function updateSkyCycle() {
     if (!game) return;
-    const cycle = Math.floor(score / 1000) % 2;
+    const cycle = Math.floor(score / 5000) % 2;
     setSkyMode(cycle === 1);
 }
 

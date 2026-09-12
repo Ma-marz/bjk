@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "cycles": [
+    {
+      "start_week": 24,
+      "names": [
+        "Anett Marvet",
+        "Eliisabet Toodo",
+        "Katariina Petermann",
+        "Karolina Louise Schultz",
+        "Linnea Süvari",
+        "Markus Martin",
+        "Stefan Carl Seppel",
+        "Paul Kask",
+        "Leo Kask",
+        "Ott Rahuvarm",
+        "Kristofer Petermann"
+      ],
+      "order": [
+        "Kristofer Petermann",
+        "Eliisabet Toodo",
+        "Karolina Louise Schultz",
+        "Markus Martin",
+        "Paul Kask",
+        "Anett Marvet",
+        "Stefan Carl Seppel",
+        "Leo Kask",
+        "Ott Rahuvarm",
+        "Katariina Petermann",
+        "Linnea Süvari"
+      ],
+      "offsets": [
+        4,
+        3,
+        5,
+        1,
+        8,
+        9,
+        7,
+        2,
+        10,
+        6
+      ]
+    }
+  ],
+  "weeks": {
+    "24": {
+      "week": 24,
+      "date": "2026-09-11",
+      "names": [
+        "Anett Marvet",
+        "Eliisabet Toodo",
+        "Katariina Petermann",
+        "Karolina Louise Schultz",
+        "Linnea Süvari",
+        "Markus Martin",
+        "Stefan Carl Seppel",
+        "Paul Kask",
+        "Leo Kask",
+        "Ott Rahuvarm",
+        "Kristofer Petermann"
+      ],
+      "cycle_start": 24,
+      "offset": 4,
+      "assignments": {
+        "Kristofer Petermann": "Paul Kask",
+        "Eliisabet Toodo": "Anett Marvet",
+        "Karolina Louise Schultz": "Stefan Carl Seppel",
+        "Markus Martin": "Leo Kask",
+        "Paul Kask": "Ott Rahuvarm",
+        "Anett Marvet": "Katariina Petermann",
+        "Stefan Carl Seppel": "Linnea Süvari",
+        "Leo Kask": "Kristofer Petermann",
+        "Ott Rahuvarm": "Eliisabet Toodo",
+        "Katariina Petermann": "Karolina Louise Schultz",
+        "Linnea Süvari": "Markus Martin"
+      }
+    }
+  }
+}

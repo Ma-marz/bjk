@@ -34,9 +34,9 @@
     position: absolute;
     width: 120px;
     height: 42px;
-    background: rgba(255,255,255,0.8);
+    background: rgba(var(--cloud-color, 110, 100, 88),0.8);
     border-radius: 40px;
-    box-shadow: 20px 8px 0 rgba(255,255,255,0.65), 46px 0 0 rgba(255,255,255,0.75), 70px 10px 0 rgba(255,255,255,0.65);
+    box-shadow: 20px 8px 0 rgba(var(--cloud-color, 110, 100, 88),0.65), 46px 0 0 rgba(var(--cloud-color, 110, 100, 88),0.75), 70px 10px 0 rgba(var(--cloud-color, 110, 100, 88),0.65);
     opacity: var(--cloud-opacity, 0.8);
     animation: cloudFloat 26s linear infinite;
     animation-play-state: paused;
@@ -91,3 +91,4 @@
     background: linear-gradient(90deg, #4c5b66 0%, #627d8d 100%);
     box-shadow: 0 -2px 0 rgba(255,255,255,0.35);
 }
+.game-container.night { --cloud-color: 255, 255, 255; }

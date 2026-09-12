@@ -20,7 +20,7 @@ button:disabled { cursor: wait; opacity: .55; }
 .page-shell { min-height: 100dvh; max-width: 1480px; margin: auto; background: linear-gradient(100deg, #f5ead5ef, #f2e4c9f5); position: relative; }
 .topbar { min-height: 84px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--border); }
 .brand-wrap { display: flex; align-items: center; gap: 10px; }
-.brand-compass { width: 42px; height: 42px; color: #795537; }
+.brand-compass { width: 64px; height: 42px; object-fit: contain; flex-shrink: 0; }
 .brand-mark { font-size: 28px; line-height: 1; letter-spacing: .09em; font-weight: bold; }
 .brand-mark span { font-style: italic; }
 .brand-caption, .eyebrow, .map-coordinate, .trail-label, .site-footer, .nav-button, label, .memory-stats, .stat-pill, .data-activity { font-family: system-ui, -apple-system, sans-serif; }
@@ -114,6 +114,8 @@ textarea { min-height: 130px; resize: vertical; }
 .message.error { color: #792e21; border-color: #994e39; background: #f1dfce; }
 .message.success { color: #45502e; border-color: #7c865b; }
 .data-activity { position: fixed; z-index: 30; left: 16px; right: 16px; top: calc(16px + env(safe-area-inset-top)); max-width: 520px; margin: 0 auto; padding: 13px 17px; font-size: 12px; line-height: 1.5; border: 1px solid #a78b61; background: #fff3da; color: #4c3622; box-shadow: 0 8px 25px #35211126; border-radius: 5px; pointer-events: auto; }
+.data-activity { touch-action: pan-y; padding-right: 48px; }
+.dismiss-activity { position: absolute; top: 0; right: 0; width: 44px; height: 44px; padding: 0; border: 0; background: transparent; color: inherit; font: 24px/1 system-ui, sans-serif; cursor: pointer; }
 .data-activity::before { content: '✓'; margin-right: 9px; font-weight: bold; }
 .data-activity[data-state="loading"]::before { content: ''; display: inline-block; width: 12px; height: 12px; border: 2px solid #cab591; border-top-color: #694427; border-radius: 50%; vertical-align: -2px; animation: spin 1s linear infinite; }
 .data-activity[data-state="error"]::before, .data-activity[data-state="pending"]::before { content: '!'; }
@@ -145,11 +147,11 @@ body:has(#appScreen.hidden) .site-footer { padding-bottom: 24px; }
   body { padding: 28px; }
   .page-shell { min-height: calc(100dvh - 56px); border: 1px solid #a3865d; box-shadow: 0 18px 70px #3f291f33; }
   .topbar { padding: 24px 42px; }
-  .brand-compass { width: 48px; height: 48px; }
+  .brand-compass { width: 76px; height: 48px; }
   .app-main { padding: 40px 42px 60px; }
   #appScreen { display: grid; grid-template-columns: 190px minmax(0,1fr); gap: 44px; }
   .main-nav { position: sticky; top: 28px; align-self: start; display: flex; flex-direction: column; gap: 10px; padding: 12px 20px 100px 0; background: none; border: 0; border-right: 1px solid #c9b18a; box-shadow: none; backdrop-filter: none; }
-  .main-nav::before { content: 'KOGUKONNA KAART'; font: 9px system-ui, sans-serif; letter-spacing: .16em; color: #8e7350; margin-bottom: 18px; }
+  .main-nav::before { content: 'TÄNANE MENÜÜ'; font: 9px system-ui, sans-serif; letter-spacing: .16em; color: #8e7350; margin-bottom: 18px; }
   .main-nav::after { content: '✧'; position: absolute; bottom: 20px; left: 60px; color: #ad9062; font-size: 40px; }
   .nav-button { flex-direction: row; justify-content: flex-start; gap: 13px; min-height: 52px; padding: 12px; font-size: 12px; }
   .section-heading { margin-bottom: 30px; padding-bottom: 28px; }

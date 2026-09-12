@@ -1,5 +1,8 @@
 # BjK
 
+Generate new prayer PDFs with the [prayer generator](tools/prayer-generator/README.md).
+Edit its `config.json` for the week and names, and `sample.txt` for the PDF layout.
+
 Prayer PDFs are rendered directly in the browser; no image-generation step is needed.
 Keep PDFs in `prayer/<name>/Nädal <number>.pdf` and choose a sheet from the dropdown.
 

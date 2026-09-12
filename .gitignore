@@ -30,3 +30,9 @@ out/
 # Test coverage
 coverage/
 .nyc_output/
+
+# Python generator environment and runtime files
+.venv/
+__pycache__/
+*.pyc
+tools/prayer-generator/history.lock

@@ -75,34 +75,37 @@ async function preloadImages(paths, timeout = 2500) {
 
 async function buildBoard() {
   const version = ++boardVersion;
+  resetState();
   const finish = beginDataActivity('games', 'Mängu pilte laaditakse…', () => buildBoard());
   restartBtn.disabled = true;
   lock = true;
+  cards = [];
+  totalPairs = 0;
+  boardEl.innerHTML = '';
   if (!imageCache) imageCache = preloadImages(listImages());
-  const imgs = (await imageCache).filter(Boolean);
-  finish(imgs.length === 0);
-  if (version !== boardVersion) return;
-  restartBtn.disabled = false;
-  lock = false;
+  let imgs = [...new Set((await imageCache).filter(Boolean))];
+  if (version !== boardVersion) { finish(); return; }
+  // Retry once automatically; never start a shortened, easier round.
+  if (imgs.length < 8) {
+    imageCache = preloadImages(listImages());
+    imgs = [...new Set((await imageCache).filter(Boolean))];
+    if (version !== boardVersion) { finish(); return; }
+  }
   if (imgs.length < 10) imageCache = null;
-  if (!imgs || imgs.length === 0) {
-    boardEl.innerHTML = '<div class="message info">Minge piltide kataloog tühi või pilte ei leitud.</div>';
-    totalPairs = 0;
-    cards = [];
+  restartBtn.disabled = false;
+  if (imgs.length < 8) {
+    boardEl.innerHTML = '<div class="message error">Kõiki 16 kaarti ei saanud laadida. Proovi uuesti.</div>';
+    finish(true);
     return;
   }
-
-  // Ensure each original image file is used at most once per round.
-  const uniqueImgs = Array.from(new Set(imgs));
-  shuffle(uniqueImgs);
-  let chosen = uniqueImgs.slice(0, Math.min(8, uniqueImgs.length));
-
-
-  totalPairs = chosen.length;
+  const chosen = shuffle(imgs).slice(0, 8);
+  totalPairs = 8;
   const pairList = shuffle([...chosen, ...chosen]);
   cards = pairList.map((src, idx) => ({ id: idx, src, matched:false }));
 
   renderBoard();
+  lock = false;
+  finish();
 }
 
 function renderBoard(){
@@ -129,7 +132,13 @@ function renderBoard(){
 }
 
 function onCardClick(card, el){
-  if (lock || card.matched || matches === totalPairs) return;
+  if (lock) return;
+  if (cards.length !== 16 || totalPairs !== 8 || boardEl.querySelectorAll('.memory-card').length !== 16) {
+    imageCache = null;
+    buildBoard();
+    return;
+  }
+  if (card.matched || matches === totalPairs) return;
   const inner = el.querySelector('.inner');
   if (!inner) return;
   // prevent clicking same card twice
@@ -262,7 +271,7 @@ function setup(container){
     restartBtn.addEventListener('click',()=>{ resetState(); buildBoard(); });
     initialized = true;
   }
-  if (boardOwner !== appState.currentUser?.id) {
+  if (boardOwner !== appState.currentUser?.id || (!lock && boardEl.querySelectorAll('.memory-card').length !== 16)) {
     boardOwner = appState.currentUser?.id;
     resetState();
     buildBoard();

@@ -21,7 +21,7 @@
     <div class="page-shell">
         <header class="topbar">
             <div class="brand-wrap">
-                <svg class="brand-compass icon" aria-hidden="true"><use href="#icon-compass"/></svg><div><div class="brand-mark">B<span>j</span>K</div><div class="brand-caption">ühe Isa lapsed</div></div>
+                <img class="brand-compass" src="assets/brand-boat.svg" alt="" aria-hidden="true"><div><div class="brand-mark">B<span>j</span>K</div><div class="brand-caption">ühe Isa lapsed</div></div>
             </div>
             <div class="topbar-actions">
                 <span id="sessionBadge" class="session-badge hidden"></span>
@@ -29,7 +29,7 @@
             </div>
         </header>
 
-        <div id="pageActivity" class="data-activity hidden" role="status" aria-live="polite" aria-atomic="true"><span id="pageActivityText"></span><button id="retryDataButton" class="ghost-button hidden" type="button">Laadi uuesti</button></div>
+        <div id="pageActivity" class="data-activity hidden" role="status" aria-live="polite" aria-atomic="true"><span id="pageActivityText"></span><button id="retryDataButton" class="ghost-button hidden" type="button">Laadi uuesti</button><button id="dismissActivityButton" class="dismiss-activity" type="button" aria-label="Sulge teavitus">×</button></div>
         <main class="app-main">
             <section id="loginScreen" class="panel auth-panel">
                 <div class="auth-map"><span class="eyebrow">BjK liikmete portaal</span><h1>Ef 6:18</h1><p>Ja palve ja anumisega palvetage igal ajal Vaimus ning selleks valvake kogu püsivusega ja eestpalvetega kõigi pühade eest</p><span class="map-coordinate">59° N &nbsp; / &nbsp; 24° E</span></div>
@@ -226,6 +226,7 @@
     <script>
         window.BJK_GOOGLE_SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwCG03usaMDEVdu75NDNj1F-5azAsgZHoyDw4DMWSSzi70kOL4cAL1qwyHSohO2wSiW/exec';
     </script>
+    <script src="prayer/available-weeks.js"></script>
     <script src="script.js"></script>
     <script src="games/memory/memory.js"></script>
     <script src="game/game-script.js"></script>

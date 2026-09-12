@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="20 375 1145 575">
+  <title>Paper boat</title>
+  <g fill="none" stroke="#795537" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M40 515 457 580 523 574 616 455 682 527 1144 397 917 890 636 924 262 927Z"/>
+    <path d="M40 515 221 543 249 623Z"/>
+    <path d="M221 543 457 580 523 574 364 681 249 623Z"/>
+    <path d="M682 527 968 447 977 543 819 676Z"/>
+    <path d="M968 447 1144 397 977 543Z"/>
+    <path d="M616 455 420 710 620 812Z"/>
+    <path d="M616 455 819 676 646 821Z"/>
+    <path d="M40 515 698 851 287 921Z"/>
+    <path d="M698 851 1099 444 917 890Z"/>
+    <path d="M698 851 718 915 636 924Z"/>
+    <path d="M698 851 864 897 799 903Z"/>
+  </g>
+</svg>

@@ -129,6 +129,54 @@ const dataActivities = new Map();
 const activityResults = new Map();
 const activityTimers = new Map();
 const scoreActivities = new Map();
+let displayedActivity = [];
+let dismissedActivity = [];
+
+function sameActivity(a, b) {
+    return a.length === b.length && a.every((item, index) => item === b[index]);
+}
+
+function dismissDataActivity() {
+    dismissedActivity = displayedActivity;
+    renderDataActivity();
+}
+
+function setUpActivityDismissal() {
+    const el = document.getElementById('pageActivity');
+    if (!el) return;
+    let swipe = null;
+    const reset = () => {
+        swipe = null;
+        el.style.transform = '';
+        el.style.opacity = '';
+    };
+    el.addEventListener('pointerdown', event => {
+        if (!event.isPrimary || event.button !== 0 || event.target.closest('button')) return;
+        swipe = { id: event.pointerId, x: event.clientX, y: event.clientY, activity: displayedActivity };
+        el.setPointerCapture(event.pointerId);
+    });
+    el.addEventListener('pointermove', event => {
+        if (!swipe || event.pointerId !== swipe.id) return;
+        const dx = event.clientX - swipe.x;
+        const dy = event.clientY - swipe.y;
+        if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+            el.style.transform = `translateX(${dx}px)`;
+            el.style.opacity = String(Math.max(0.3, 1 - Math.abs(dx) / el.offsetWidth));
+        }
+    });
+    el.addEventListener('pointerup', event => {
+        if (!swipe || event.pointerId !== swipe.id) return;
+        const dx = event.clientX - swipe.x;
+        const dy = event.clientY - swipe.y;
+        const dismiss = Math.abs(dx) >= 60 && Math.abs(dx) > Math.abs(dy) * 1.5
+            && sameActivity(swipe.activity, displayedActivity);
+        reset();
+        if (dismiss) dismissDataActivity();
+    });
+    el.addEventListener('pointercancel', reset);
+    el.addEventListener('lostpointercapture', reset);
+    document.getElementById('dismissActivityButton')?.addEventListener('click', dismissDataActivity);
+}
 
 function currentActivityScope() {
     return appState.currentUser ? appState.currentView : 'account';
@@ -147,7 +195,7 @@ function renderDataActivity() {
     el.dataset.state = loading ? 'loading' : pending ? 'pending' : result?.failed ? 'error' : 'ready';
     const text = loading
         ? (active.length + Number(saving) > 1 ? 'Andmeid uuendatakse…' : saving ? 'Tulemust salvestatakse…' : active[0].label)
-        : pending?.message || result?.text || '';
+        : pending?.message || (result?.failed ? result.text : '') || '';
     document.getElementById('pageActivityText').textContent = text;
     const retryButton = document.getElementById('retryDataButton');
     const retry = pending ? () => processPendingScores() : result?.retry;
@@ -159,7 +207,8 @@ function renderDataActivity() {
         try { await retry(); } catch (error) { console.warn('Data reload failed:', error); }
         finally { renderDataActivity(); }
     };
-    el.classList.toggle('hidden', !text);
+    displayedActivity = [scope, ...active, ...scores, result];
+    el.classList.toggle('hidden', !text || sameActivity(displayedActivity, dismissedActivity));
     el.setAttribute('aria-busy', String(loading));
 }
 function setActivityResult(scope, failed, text, retry) {
@@ -227,6 +276,7 @@ function hideLoading(element) {
 }
 
 function showView(viewName) {
+    const changed = appState.currentView !== viewName;
     appState.currentView = viewName;
     renderDataActivity();
     document.querySelectorAll('.nav-button').forEach((button) => {
@@ -240,6 +290,11 @@ function showView(viewName) {
         panel.classList.toggle('hidden', !shouldShow);
         panel.classList.toggle('active', shouldShow);
     });
+    if (changed) window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (changed && viewName === 'prayers' && appState.currentUser) {
+        prayerRenderKey = '';
+        renderPrayers();
+    }
 }
 
 function buildPrayerUrl(userName, weekNumber) {
@@ -262,7 +317,12 @@ let cancelPdfLoad = null;
 let loadedPdfUrl = '';
 let prayerImageUrl = '';
 async function loadPDF(fileURL) {
-    if (loadedPdfUrl === fileURL) { updateOpenPdfButton(fileURL); return; }
+    if (loadedPdfUrl === fileURL) {
+        const previewId = location.protocol === 'file:' ? 'localPdfFrame' : 'prayerImage';
+        document.getElementById(previewId)?.classList.remove('hidden');
+        updateOpenPdfButton(fileURL);
+        return;
+    }
     cancelPdfLoad?.();
     const image = document.getElementById('prayerImage');
     if (!image) return;
@@ -273,7 +333,7 @@ async function loadPDF(fileURL) {
         localFrame.classList.add('hidden');
         localFrame.removeAttribute('src');
     }
-    const finish = beginDataActivity('prayers', 'Sedelit laaditakse…', () => loadPDF(fileURL));
+    const finish = beginDataActivity('prayers', 'Sedelit laetakse…', () => loadPDF(fileURL));
     const controller = new AbortController();
     let loadingTask;
     let renderTask;
@@ -313,7 +373,7 @@ async function loadPDF(fileURL) {
             // Navigate the built-in PDF viewer to the original document instead.
             const frame = document.getElementById('localPdfFrame');
             frame.classList.remove('hidden');
-            frame.onload = () => { if (!cancelled) complete(false); };
+            frame.onload = () => { if (!cancelled) { loadedPdfUrl = fileURL; complete(false); } };
             frame.onerror = () => { if (!cancelled) complete(true); };
             frame.src = `${fileURL}#toolbar=0&navpanes=0&view=FitH`;
             return;
@@ -366,35 +426,10 @@ async function loadPDF(fileURL) {
 }
 const prayerWeekCache = new Map();
 async function getAvailablePrayerWeeks(userName) {
-    const allWeeks = Array.from({ length: DEFAULT_WEEK }, (_, index) => index + 1);
-    if (!/^https?:/.test(location.protocol)) return allWeeks.reverse();
-    const cached = prayerWeekCache.get(userName);
-    if (cached && cached.expires > Date.now()) return cached.promise;
-    const promise = (async () => {
-        const finish = beginDataActivity('prayers', 'Sedelite nimekirja laaditakse…', () => {
-            prayerWeekCache.delete(userName);
-            prayerRenderKey = '';
-            return renderPrayers();
-        });
-        const available = [];
-        let failed = false;
-        let index = 0;
-        await Promise.all(Array.from({ length: 6 }, async () => {
-            while (index < allWeeks.length) {
-                const week = allWeeks[index++];
-                try {
-                    const response = await fetch(buildPrayerUrl(userName, week), { method: 'HEAD', signal: AbortSignal.timeout(8000) });
-                    if (response.ok) available.push(week);
-                    else if (response.status !== 404) failed = true;
-                } catch (error) { failed = true; }
-            }
-        }));
-        finish(failed);
-        if (failed) { prayerWeekCache.delete(userName); throw new Error('Prayer availability could not be loaded'); }
-        return available.sort((a,b) => b-a);
-    })();
-    prayerWeekCache.set(userName, { promise, expires: Date.now() + 300000 });
-    return promise;
+    const index = window.BJK_PRAYER_WEEKS;
+    if (!index) throw new Error('Prayer file index could not be loaded');
+    const weeks = Object.hasOwn(index, userName) ? index[userName] : [];
+    return [...weeks].sort((a, b) => b - a);
 }
 let prayerRenderKey = '';
 let prayerRenderVersion = 0;
@@ -410,16 +445,9 @@ async function renderPrayers() {
     prayerRenderKey = key;
     const version = ++prayerRenderVersion;
 
-    // Fast UI: populate dropdown immediately, then refine if possible.
-    prayerSelect.innerHTML = '';
-    for (let i = (appState.weekNr || DEFAULT_WEEK); i >= 1; i -= 1) {
-        const option = document.createElement('option');
-        option.value = String(i);
-        option.textContent = `Sedel nr ${i}`;
-        prayerSelect.appendChild(option);
-    }
-    prayerSelect.value = String(appState.weekNr || DEFAULT_WEEK);
-    prayerSelect.disabled = false;
+    // Only indexed files become selectable; never offer guessed weeks.
+    prayerSelect.innerHTML = '<option value="">Laadin palvesedeleid…</option>';
+    prayerSelect.disabled = true;
     if (prayerEmptyState) prayerEmptyState.classList.add('hidden');
     hideOpenPdfButton();
 
@@ -433,7 +461,7 @@ async function renderPrayers() {
         });
     };
 
-    // If possible, refine with availability probe (only over http)
+    // The generated index also works when opening the site directly from disk.
     try {
         const availableWeeks = await getAvailablePrayerWeeks(userName);
         if (version !== prayerRenderVersion || appState.currentUser?.name !== userName) return;
@@ -444,12 +472,15 @@ async function renderPrayers() {
             hideOpenPdfButton();
             return;
         }
-        // filter existing options to available ones
-        const options = Array.from(prayerSelect.options);
-        options.forEach((opt) => {
-            if (!availableWeeks.includes(Number(opt.value))) opt.remove();
-        });
-        const selected = availableWeeks.includes(Number(appState.weekNr)) ? Number(appState.weekNr) : availableWeeks[0];
+        prayerSelect.innerHTML = '';
+        for (const week of availableWeeks) {
+            const option = document.createElement('option');
+            option.value = String(week);
+            option.textContent = `Sedel nr ${week}`;
+            prayerSelect.appendChild(option);
+        }
+        prayerSelect.disabled = false;
+        const selected = availableWeeks[0];
         appState.weekNr = selected;
         prayerRenderKey = `${userName}:${selected}`;
         prayerSelect.value = String(selected);
@@ -460,11 +491,10 @@ async function renderPrayers() {
     } catch (err) {
         if (version !== prayerRenderVersion || appState.currentUser?.name !== userName) return;
         prayerRenderKey = '';
-        // Allow direct access if availability checks failed.
-        const prayerPath = buildPrayerUrl(userName, Number(prayerSelect.value));
-        await loadPDF(prayerPath).catch(() => {
-            if (prayerEmptyState) prayerEmptyState.classList.remove('hidden');
-        });
+        prayerSelect.innerHTML = '<option value="">Palvesedelite laadimine ebaõnnestus</option>';
+        prayerSelect.disabled = true;
+        hideOpenPdfButton();
+        setActivityResult('prayers', true, 'Palvesedelite nimekirja laadimine ebaõnnestus. Laadi leht uuesti.');
     }
 }
 
@@ -855,11 +885,11 @@ async function handlePasswordChange(event) {
 }
 
 const requestLabels = {
-    login: ['account', 'Sisse logitakse…'], logout: ['account', 'Välja logitakse…'],
-    getUsers: ['members', 'Liikmeid laaditakse…'], updateUserStatus: ['members', 'Liikme olekut salvestatakse…'],
-    getSentMessages: ['messages', 'Saadetud sõnumeid laaditakse…'], getInbox: ['messages', 'Saabunud sõnumeid laaditakse…'],
+    login: ['account', 'Sisse logimine…'], logout: ['account', 'Välja logimine…'],
+    getUsers: ['members', 'Liikmeid laetakse…'], updateUserStatus: ['members', 'Liikme olekut salvestatakse…'],
+    getSentMessages: ['messages', 'Saadetud sõnumeid laetakse…'], getInbox: ['messages', 'Saabunud sõnumeid laetakse…'],
     sendMessage: ['messages', 'Sõnumit saadetakse…'], changePassword: ['settings', 'Salasõna uuendatakse…'],
-    getLeaderboard: ['games', 'Edetabelit laaditakse…'], saveScore: ['games', 'Tulemust salvestatakse…']
+    getLeaderboard: ['games', 'Edetabelit laetakse…'], saveScore: ['games', 'Tulemust salvestatakse…']
 };
 const pendingReads = new Map();
 function callAppsScript(action, payload = {}) {
@@ -1008,6 +1038,7 @@ window.saveScoreWithFallback = saveScoreWithFallback;
 
 
 function setUpEventBindings() {
+    setUpActivityDismissal();
     document.getElementById('loginForm')?.addEventListener('submit', handleLogin);
     document.getElementById('logoutButton')?.addEventListener('click', handleLogout);
     document.getElementById('messageForm')?.addEventListener('submit', handleMessageSubmit);
@@ -1020,8 +1051,14 @@ function setUpEventBindings() {
     const tabReceived = document.getElementById('msgTabReceived');
     const tabSent = document.getElementById('msgTabSent');
     if (tabReceived && tabSent) {
-        tabReceived.addEventListener('click', () => setMessageTab('received'));
-        tabSent.addEventListener('click', () => setMessageTab('sent'));
+        tabReceived.addEventListener('click', () => {
+            setMessageTab('received');
+            window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        });
+        tabSent.addEventListener('click', () => {
+            setMessageTab('sent');
+            window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        });
     }
 }
 
