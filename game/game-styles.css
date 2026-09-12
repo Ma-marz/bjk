@@ -38,6 +38,7 @@
     border-radius: 40px;
     box-shadow: 20px 8px 0 rgba(var(--cloud-color, 110, 100, 88),0.65), 46px 0 0 rgba(var(--cloud-color, 110, 100, 88),0.75), 70px 10px 0 rgba(var(--cloud-color, 110, 100, 88),0.65);
     opacity: var(--cloud-opacity, 0.8);
+    transition: background-color 3s ease, box-shadow 3s ease, opacity 3s ease;
     animation: cloudFloat 26s linear infinite;
     animation-play-state: paused;
 }

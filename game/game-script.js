@@ -160,7 +160,7 @@ function setObsParams() {
 
     obstacle.style.width = `${o_width}px`;
     obstacle.style.height = `${o_height}px`;
-    obstacle.style.backgroundImage = `url(game/img/${getRandomInt(1, 10)}.png)`;
+    obstacle.style.backgroundImage = `url(game/img/${getRandomInt(1, 11)}.png)`;
     obstacle.style.boxShadow = '0 6px 16px rgba(31, 41, 51, 0.25)';
 }
 

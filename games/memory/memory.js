@@ -44,7 +44,7 @@ function decodeMemoryScore(score) {
 }
 
 function listImages() {
-  return Array.from({ length: 10 }, (_, index) => `game/img/${index + 1}.png`);
+  return Array.from({ length: 11 }, (_, index) => `game/img/${index + 1}.png`);
 }
 let imageCache = null;
 let boardVersion = 0;
@@ -91,7 +91,7 @@ async function buildBoard() {
     imgs = [...new Set((await imageCache).filter(Boolean))];
     if (version !== boardVersion) { finish(); return; }
   }
-  if (imgs.length < 10) imageCache = null;
+  if (imgs.length < listImages().length) imageCache = null;
   restartBtn.disabled = false;
   if (imgs.length < 8) {
     boardEl.innerHTML = '<div class="message error">Kõiki 16 kaarti ei saanud laadida. Proovi uuesti.</div>';
