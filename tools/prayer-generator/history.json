@@ -2,7 +2,7 @@
   "version": 1,
   "cycles": [
     {
-      "start_week": 24,
+      "start_week": 25,
       "names": [
         "Anett Marvet",
         "Eliisabet Toodo",
@@ -44,9 +44,9 @@
     }
   ],
   "weeks": {
-    "24": {
-      "week": 24,
-      "date": "2026-09-11",
+    "25": {
+      "week": 25,
+      "date": "2026-09-13",
       "names": [
         "Anett Marvet",
         "Eliisabet Toodo",
@@ -60,7 +60,7 @@
         "Ott Rahuvarm",
         "Kristofer Petermann"
       ],
-      "cycle_start": 24,
+      "cycle_start": 25,
       "offset": 4,
       "assignments": {
         "Kristofer Petermann": "Paul Kask",
