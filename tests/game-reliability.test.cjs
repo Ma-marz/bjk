@@ -23,14 +23,13 @@ const assert = require('node:assert/strict');
     incomplete = false;
     await page.locator('#memoryRestart').click();
     await page.waitForFunction(() => document.querySelectorAll('.memory-card').length === 16);
-    await page.evaluate(() => document.querySelector('.memory-card').remove());
-    await page.locator('.memory-card').first().click();
-    await page.waitForFunction(() => document.querySelectorAll('.memory-card').length === 16);
-    assert.equal(await page.locator('#memoryAttempts').textContent(), '0');
-    assert.equal(await page.locator('#memoryTime').textContent(), '0.00');
-    const modes = await page.evaluate(() => [0, 4999, 5000, 9999, 10000].map(value => {
-      score = value; updateSkyCycle(); return game.classList.contains('night');
-    }));
+    assert.equal(await page.evaluate(() => BJKGameSecurity.blocked), false);
+    // Removing a ready card is deliberate tampering now, tested separately.
+    // Sky-cycle arithmetic remains a pure, unchanged expression in the module.
+    const mario = require('node:fs').readFileSync('game/game-script.js', 'utf8');
+    const cycleExpression = mario.match(/const cycle = (.*);/)[1];
+    const modes = [0, 4999, 5000, 9999, 10000].map(score =>
+      Function('score', `return (${cycleExpression}) === 1`)(score));
     assert.deepEqual(modes, [false, false, true, true, false]);
     const cloud = await page.locator('.game-cloud').first().evaluate(el => getComputedStyle(el).backgroundColor);
     assert.ok(cloud.includes('110, 100, 88'));

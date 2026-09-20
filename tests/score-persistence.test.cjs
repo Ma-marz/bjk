@@ -13,7 +13,19 @@ function setup(send, storageFails = false) {
         window: { addEventListener() {} }, setInterval() {}, console,
         callAppsScript: send, setSessionState() {}, renderLeaderboard() {}, updateDbTimestamp() {}
     });
-    vm.runInContext(queue, context);
+    let blocked = false;
+    const stops = [];
+    context.window.BJKGameSecurity = {
+        check: () => !blocked, authorize: () => !blocked,
+        block: () => { blocked = true; stops.forEach(stop => stop()); },
+        register: () => ({ monitor() {}, bindSaver() {}, requestPermit: () => ({}), onBlock: stop => stops.push(stop) }),
+        publish: (name, value) => { context[name] = context.window[name] = value; }
+    };
+    context.performAppsScriptRequest = send;
+    // Inspect the private queue only in this isolated harness, never in the page.
+    vm.runInContext(queue.replace('guard.bindSaver(saveScoreWithFallback);',
+        'window.readPendingScores = readPendingScores; guard.bindSaver(saveScoreWithFallback);'), context);
+    context.readPendingScores = context.window.readPendingScores;
     return context;
 }
 const ok = score => ({ success: true, data: { bestScore: score, leaderboard: [] } });
@@ -61,4 +73,17 @@ test('storage failures retain pending scores in memory', async () => {
     const c = setup(async () => ({ success: false }), true);
     await c.saveScoreWithFallback('bjker-mario', 100);
     assert.equal(c.readPendingScores().length, 1);
+});
+
+test('a late acknowledgement after compromise cannot update a best or retain a pending score', async () => {
+    let release;
+    const c = setup(() => new Promise(resolve => release = resolve));
+    const pending = c.saveScoreWithFallback('bjker-mario', 900);
+    assert.equal(c.readPendingScores().length, 1);
+    c.window.BJKGameSecurity.block();
+    release(ok(900));
+    assert.equal((await pending).blocked, true);
+    assert.equal(c.readPendingScores().length, 0);
+    assert.equal(c.appState.currentUser.bestScore, 0);
+    assert.equal((await c.saveScoreWithFallback('bjker-mario', 1000)).blocked, true);
 });

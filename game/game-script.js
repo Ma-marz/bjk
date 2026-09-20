@@ -1,3 +1,7 @@
+(function () {
+'use strict';
+const security = window.BJKGameSecurity;
+const guard = security.register('bjker-mario');
 const character = document.getElementById('character');
 const obstacle = document.getElementById('obstacle');
 const floor = document.getElementById('floor');
@@ -42,24 +46,20 @@ function updateScoreDisplay() {
 }
 
 function saveBestScore() {
-    const userName = typeof appState !== 'undefined' ? appState.currentUser?.name : ''; 
-    // Submit every completed run: local records are not proof of a server save.
-    window.dispatchEvent(new CustomEvent('bjk-best-score', {
-        detail: { user: userName, score }
-    }));
+    if (score > 0) guard.submit(score).catch(console.warn);
 }
 
 function jump() {
     if (!game || !character || isJumping) return;
     isJumping = true;
     let jumpHeight = 0;
-    const jumpInterval = setInterval(() => {
+    const jumpInterval = guard.interval(() => {
         if (gameRunning) {
             if (jumpHeight >= jump_height) {
-                clearInterval(jumpInterval);
-                const fallInterval = setInterval(() => {
+                guard.clearTimer(jumpInterval);
+                const fallInterval = guard.interval(() => {
                     if (jumpHeight <= 0 || !gameRunning) {
-                        clearInterval(fallInterval);
+                        guard.clearTimer(fallInterval);
                         isJumping = false;
                     } else {
                         jumpHeight -= 5.2 * speed_param;
@@ -71,7 +71,7 @@ function jump() {
                 character.style.bottom = `${floor_height + jumpHeight}px`;
             }
         } else {
-            clearInterval(jumpInterval);
+            guard.clearTimer(jumpInterval);
             isJumping = false;
         }
     }, speed);
@@ -94,7 +94,7 @@ function moveObstacle() {
     updateScoreDisplay();
 
     let obstaclePosition = game.offsetWidth;
-    const obstacleInterval = setInterval(() => {
+    const obstacleInterval = guard.interval(() => {
         if (!gameRunning) {
             obstaclePosition = game.offsetWidth;
         } else {
@@ -210,7 +210,7 @@ function restart() {
     updateSkyCycle();
     game.style.background = 'linear-gradient(180deg, #def4ff 0%, #eef8ff 100%)';
     game.classList.add('running');
-    setTimeout(() => {
+    guard.timeout(() => {
         setObsParams();
         gameRunning = true;
     }, 420);
@@ -219,7 +219,7 @@ function restart() {
 if (game) {
     game.classList.remove('running');
 
-    document.addEventListener('keydown', (event) => {
+    document.addEventListener('keydown', guard.wrap((event) => {
         if (!game.getClientRects().length || /INPUT|TEXTAREA|SELECT|BUTTON/.test(event.target.tagName)) return;
         if (event.code !== 'Space' && event.code !== 'ArrowUp') return;
         event.preventDefault();
@@ -230,20 +230,37 @@ if (game) {
         } else {
             restart();
         }
-    });
+    }));
 
-    document.getElementsByTagName('body')[0].addEventListener('click', (event) => {
+    document.getElementsByTagName('body')[0].addEventListener('click', guard.wrap((event) => {
         if (gameRunning) {
             jump();
         }
-    });
+    }));
 
-    game.addEventListener('click', () => {
+    game.addEventListener('click', guard.wrap(() => {
         if (!gameRunning) {
             restart();
         }
-    });
+    }));
 
     obstacle.style.display = 'none';
     moveObstacle();
 }
+
+// Mutable run state is private; snapshots catch debugger-scope edits between ticks.
+guard.monitor(() => JSON.stringify([isJumping, gameRunning, score, best_score,
+    o_width, o_height, speed_param, floor_height, new_floor_height, level]));
+guard.styles(/(?:#|\.)(?:character|obstacle|floor|game-container)(?:[\s.#:\[>+~]|$)/);
+// Computed positioning also catches injected broad selectors that change collision.
+guard.monitor(() => [character, obstacle].map(node => {
+    const css = getComputedStyle(node);
+    return [css.width, css.height, css.bottom, css.transform, css.position,
+        node === character ? css.left : '', css.opacity, css.visibility].join('|');
+}).join(';'));
+guard.watch(game, { attributes: true });
+[character, obstacle, floor, score_board].forEach(node => guard.watch(node));
+[jump, moveObstacle, setObsParams, changeFloor, restart, saveBestScore, fixPlayerHeight, getRandomInt, isLevelUp, setAllParam, updateScoreDisplay, updateSkyCycle].forEach((fn, i) =>
+    guard.monitor(() => [jump, moveObstacle, setObsParams, changeFloor, restart, saveBestScore, fixPlayerHeight, getRandomInt, isLevelUp, setAllParam, updateScoreDisplay, updateSkyCycle][i]));
+guard.onBlock(() => { gameRunning = false; isJumping = false; game?.classList.remove('running'); });
+})();

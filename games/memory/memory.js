@@ -1,6 +1,8 @@
 (function(){
 // Memory game module
 const GAME_ID = 'bjk-memory';
+const security = window.BJKGameSecurity;
+const guard = security.register(GAME_ID);
 let boardEl, timeEl, attemptsEl, restartBtn, leaderboardEl;
 let timerInterval = null;
 let startTime = 0;
@@ -74,38 +76,37 @@ async function preloadImages(paths, timeout = 2500) {
 }
 
 async function buildBoard() {
-  const version = ++boardVersion;
-  resetState();
-  const finish = beginDataActivity('games', 'Mängu pilte laaditakse…', () => buildBoard());
-  restartBtn.disabled = true;
-  lock = true;
-  cards = [];
-  totalPairs = 0;
-  boardEl.innerHTML = '';
-  if (!imageCache) imageCache = preloadImages(listImages());
+  let version, finish;
+  guard.run(() => {
+    version = ++boardVersion;
+    resetState();
+    finish = beginDataActivity('games', 'Mängu pilte laaditakse…', guard.wrap(buildBoard));
+    restartBtn.disabled = true; lock = true; cards = []; totalPairs = 0;
+    boardEl.innerHTML = '';
+    if (!imageCache) imageCache = preloadImages(listImages());
+  });
+  if (!security.check()) return;
   let imgs = [...new Set((await imageCache).filter(Boolean))];
-  if (version !== boardVersion) { finish(); return; }
-  // Retry once automatically; never start a shortened, easier round.
+  if (!security.check() || version !== boardVersion) { finish(); return; }
+  // A failed image load still retries; outside edits to an existing board block.
   if (imgs.length < 8) {
     imageCache = preloadImages(listImages());
     imgs = [...new Set((await imageCache).filter(Boolean))];
-    if (version !== boardVersion) { finish(); return; }
+    if (!security.check() || version !== boardVersion) { finish(); return; }
   }
-  if (imgs.length < listImages().length) imageCache = null;
-  restartBtn.disabled = false;
-  if (imgs.length < 8) {
-    boardEl.innerHTML = '<div class="message error">Kõiki 16 kaarti ei saanud laadida. Proovi uuesti.</div>';
-    finish(true);
-    return;
-  }
-  const chosen = shuffle(imgs).slice(0, 8);
-  totalPairs = 8;
-  const pairList = shuffle([...chosen, ...chosen]);
-  cards = pairList.map((src, idx) => ({ id: idx, src, matched:false }));
-
-  renderBoard();
-  lock = false;
-  finish();
+  guard.run(() => {
+    if (imgs.length < listImages().length) imageCache = null;
+    restartBtn.disabled = false;
+    if (imgs.length < 8) {
+      boardEl.innerHTML = '<div class="message error">Kõiki 16 kaarti ei saanud laadida. Proovi uuesti.</div>';
+      finish(true); return;
+    }
+    const chosen = shuffle(imgs).slice(0, 8);
+    totalPairs = 8;
+    const pairList = shuffle([...chosen, ...chosen]);
+    cards = pairList.map((src, idx) => ({ id: idx, src, matched:false }));
+    renderBoard(); lock = false; finish();
+  });
 }
 
 function renderBoard(){
@@ -126,7 +127,7 @@ function renderBoard(){
         <div class="face front"><img src="${card.src}" alt="card"></div>
       </div>
     `;
-    el.addEventListener('click',()=>onCardClick(card, el));
+    el.addEventListener('click',guard.wrap(()=>onCardClick(card, el)));
     boardEl.appendChild(el);
   });
 }
@@ -173,7 +174,7 @@ function onCardClick(card, el){
       timeEl.textContent = fmtSeconds(elapsed);
       finishGame();
     }
-    setTimeout(()=>{
+    guard.timeout(()=>{
       if (version !== boardVersion) return;
       firstCard.el.classList.add('matched');
       second.el.classList.add('matched');
@@ -182,7 +183,7 @@ function onCardClick(card, el){
     }, 350);
   } else {
     // not match
-    setTimeout(()=>{
+    guard.timeout(()=>{
       if (version !== boardVersion) return;
       firstCard.el.classList.remove('flipped');
       second.el.classList.remove('flipped');
@@ -194,14 +195,14 @@ function onCardClick(card, el){
 
 function startTimer(){
   startTime = Date.now();
-  timerInterval = setInterval(()=>{
+  timerInterval = guard.interval(()=>{
     elapsed = Date.now()-startTime;
     timeEl.textContent = fmtSeconds(elapsed);
   }, 100);
 }
 
 function stopTimer(){
-  if (timerInterval) { clearInterval(timerInterval); timerInterval=null; }
+  if (timerInterval) { guard.clearTimer(timerInterval); timerInterval=null; }
 }
 
 async function finishGame(){
@@ -210,11 +211,11 @@ async function finishGame(){
   // Store time and attempts together in the existing numeric score field.
   try {
     const sendVal = encodeMemoryScore(ms, attempts);
-    const saver = (window && window.saveScoreWithFallback) ? window.saveScoreWithFallback : async (g,s)=> await callAppsScript('saveScore', { game: g, score: s });
-    const res = await saver(GAME_ID, sendVal);
+    const res = await guard.submit(sendVal);
+    if (!security.check()) return;
     if (res && res.success && res.data) {
       if (res.data.leaderboard && Array.isArray(res.data.leaderboard)) {
-        renderLeaderboardList(res.data.leaderboard, leaderboardEl);
+        guard.run(() => renderLeaderboardList(res.data.leaderboard, leaderboardEl));
         return;
       }
     } else if (res && res.queued) {
@@ -231,8 +232,8 @@ async function refreshLeaderboard(){
   const token = appState.sessionToken;
   try {
     const res = await callAppsScript('getLeaderboard', { game: GAME_ID });
-    if (token === appState.sessionToken && res && res.success && res.data && Array.isArray(res.data.leaderboard)) {
-      renderLeaderboardList(res.data.leaderboard, leaderboardEl);
+    if (security.check() && token === appState.sessionToken && res && res.success && res.data && Array.isArray(res.data.leaderboard)) {
+      guard.run(() => renderLeaderboardList(res.data.leaderboard, leaderboardEl));
     }
   } catch(e){ console.warn('leaderboard fetch failed', e); }
 }
@@ -268,7 +269,8 @@ function setup(container){
   restartBtn = document.getElementById('memoryRestart');
   leaderboardEl = document.getElementById('leaderboard-bjk-memory');
   if (!initialized) {
-    restartBtn.addEventListener('click',()=>{ resetState(); buildBoard(); });
+    restartBtn.addEventListener('click',guard.wrap(()=>{ resetState(); buildBoard(); }));
+    [boardEl, timeEl, attemptsEl].forEach(node => guard.watch(node));
     initialized = true;
   }
   if (boardOwner !== appState.currentUser?.id || (!lock && boardEl.querySelectorAll('.memory-card').length !== 16)) {
@@ -279,8 +281,28 @@ function setup(container){
   refreshLeaderboard();
 }
 
-// expose init
-window.BJKMemory = { init: setup, refreshLeaderboard, renderLeaderboard: list => {
-  if (Array.isArray(list)) renderLeaderboardList(list, leaderboardEl);
-} };
+guard.styles(/memory-card|memoryBoard|memory-board|memoryTime|memoryAttempts/);
+[onCardClick, startTimer, finishGame, encodeMemoryScore].forEach((fn, i) =>
+  guard.monitor(() => [onCardClick, startTimer, finishGame, encodeMemoryScore][i]));
+// Public entry points grant no access to mutable card/timer/completion state.
+guard.monitor(() => JSON.stringify([startTime, elapsed, attempts, lock, matches,
+  totalPairs, cards, boardVersion, firstCard?.card, timerInterval]));
+guard.monitor(() => firstCard?.el);
+// These face properties do not animate when cards flip or resize. They catch
+// broad injected CSS (e.g. '* { backface-visibility: visible }') as well.
+guard.monitor(() => {
+  const card = boardEl?.querySelector('.memory-card');
+  if (!card) return '';
+  return ['.inner', '.front', '.back'].map(selector => {
+    const css = getComputedStyle(card.querySelector(selector));
+    return [css.backfaceVisibility, css.transformStyle, css.opacity, css.visibility,
+      selector === '.inner' ? '' : css.transform].join('|');
+  }).join(';');
+});
+guard.onBlock(() => { stopTimer(); lock = true; boardVersion++; });
+security.publish('BJKMemory', { init: guard.wrap(setup), refreshLeaderboard: guard.wrap(refreshLeaderboard),
+  renderLeaderboard: guard.wrap(list => {
+    if (Array.isArray(list)) renderLeaderboardList(list, leaderboardEl);
+  })
+});
 })();

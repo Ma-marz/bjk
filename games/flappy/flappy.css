@@ -1,0 +1,13 @@
+.art-flappy { color: #795537; background: radial-gradient(ellipse at 70% 25%, #fff5d9 0, transparent 55%), repeating-linear-gradient(0deg, transparent 0 28px, #b5a07822 29px 30px), #d6ddc4; }
+.art-flappy svg { width: 180px; max-width: 65%; height: 110px; transform: rotate(-8deg); }
+.flappy-stage { position: relative; width: 100%; max-width: min(420px, calc((100svh - 150px) * .7)); margin: 0 auto; overflow: hidden; border: 1px solid #9e825a; border-radius: 6px; background: #e8dfbe; box-shadow: 0 8px 24px #51371d14; }
+#flappyCanvas { display: block; width: 100%; aspect-ratio: 7 / 10; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+#flappyCanvas:focus-visible { outline: 3px solid #795537; outline-offset: -5px; }
+.flappy-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px; text-align: center; background: #f8edcfad; pointer-events: none; }
+.flappy-overlay h4 { margin: 0; color: #4f3826; font: 34px/1.1 Georgia, serif; }
+.flappy-overlay p { max-width: 265px; margin: 0; font: 14px/1.6 system-ui, sans-serif; color: #604d37; }
+.flappy-overlay button { pointer-events: auto; min-height: 48px; margin-top: 8px; }
+.flappy-eyebrow { font: 10px system-ui, sans-serif; letter-spacing: .2em; color: #82663c; }
+.flappy-help { max-width: 420px; margin: 12px auto 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; font: 11px/1.5 system-ui, sans-serif; color: #79654b; }
+#subview-bjk-flappy .game-summary { justify-content: center; }
+@media (max-width: 380px) { .flappy-overlay { padding: 16px; gap: 10px; } .flappy-overlay h4 { font-size: 28px; } }

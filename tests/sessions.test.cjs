@@ -93,7 +93,8 @@ test('requests keep the active identity instead of importing another tabs stored
   const bodies = [];
   const state = { sessionToken: 'active-device' };
   const c = vm.createContext({
-    appState: state, GOOGLE_SHEET_ENDPOINT: 'https://example.test', AbortSignal,
+    appState: state, GOOGLE_SHEET_ENDPOINT: 'https://example.test', AbortSignal, AbortController,
+    setTimeout, clearTimeout, window: { BJKGameSecurity: {} },
     readSessionState: () => ({ token: 'another-account' }),
     fetch: async (_, options) => {
       bodies.push(JSON.parse(options.body));

@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="game/game-styles.css">
     <link rel="stylesheet" href="games/memory/memory.css">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="games/flappy/flappy.css">
     <title>BjK</title>
 </head>
 <body>
@@ -142,6 +143,12 @@
                             <p class="muted">Vanadust näitavad kaks asja;<br>esiteks hakkab mälu kehvenema,<br>teine ei tule praegu meelde...</p>
                             <button class="primary-button play-game-button" data-game="bjk-memory">Kas sina mäletad? <span aria-hidden="true">↗</span></button>
                         </article>
+                        <article class="game-card" data-game="bjk-flappy">
+                            <div class="game-card-art art-flappy"><span class="map-chapter">III</span><svg viewBox="0 0 180 100" aria-hidden="true"><path d="M10 75Q48 30 78 55T170 20" fill="none" stroke="currentColor" stroke-dasharray="3 7"/><path d="m55 32 70-22-29 55-7-25Z" fill="#f8ebcc" stroke="currentColor" stroke-width="2"/><path d="m55 32 34 8 36-30" fill="none" stroke="currentColor" stroke-width="2"/></svg><span class="trail-label">tiibadel edasi</span></div>
+                            <h3>Flappy BjK</h3>
+                            <p class="muted">Mõnel siin ilmselge eelis, aga kes meist lendab kõige kaugemale?</p>
+                            <button class="primary-button play-game-button" data-game="bjk-flappy">Lenda! <span aria-hidden="true">↗</span></button>
+                        </article>
                     </div>
 
                     <!-- BjKer Mario subview (kept intact) -->
@@ -194,6 +201,22 @@
                         </div>
                     </div>
 
+                    <div id="subview-bjk-flappy" class="game-subview hidden">
+                        <div class="game-header"><button class="ghost-button back-to-games">‹ Tagasi</button><h3>Flappy BjK</h3></div>
+                        <div class="game-summary"><div class="stat-pill">Väravaid: <strong id="flappyScore">0</strong></div><div class="stat-pill">Parim: <strong id="flappyBest">0</strong></div></div>
+                        <div class="flappy-stage" id="flappyStage">
+                            <canvas id="flappyCanvas" width="420" height="600" tabindex="0" aria-label="Flappy BjK. Lendamiseks puuduta mängu või vajuta tühikut."></canvas>
+                            <div class="flappy-overlay" id="flappyOverlay">
+                                <span class="flappy-eyebrow">TIIBADELE!</span>
+                                <h4 id="flappyTitle">Taevas ootab</h4>
+                                <p id="flappyDescription">Puuduta mängu või vajuta tühikut. Lenda väravatest läbi.</p>
+                                <button type="button" class="primary-button" id="flappyAction">Alusta lendu</button>
+                            </div>
+                        </div>
+                        <p class="visually-hidden" id="flappyAnnouncement" role="status" aria-live="polite"></p>
+                        <div class="leaderboard-card"><h3>Kõige kaugemad lennud</h3><ol id="leaderboard-bjk-flappy" class="leaderboard-list"></ol></div>
+                    </div>
+
                 </div>
 
                 <div id="view-settings" class="view-panel hidden">
@@ -227,8 +250,11 @@
         window.BJK_GOOGLE_SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwCG03usaMDEVdu75NDNj1F-5azAsgZHoyDw4DMWSSzi70kOL4cAL1qwyHSohO2wSiW/exec';
     </script>
     <script src="prayer/available-weeks.js"></script>
+    <script src="games/security.js"></script>
     <script src="script.js"></script>
     <script src="games/memory/memory.js"></script>
+    <script src="games/flappy/engine.js"></script>
+    <script src="games/flappy/flappy.js"></script>
     <script src="game/game-script.js"></script>
 </body>
 </html>

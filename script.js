@@ -78,6 +78,7 @@ function setSessionState(token, user = null) {
 }
 
 function clearSession() {
+    window.BJKFlappy?.close();
     appState.sessionToken = '';
     appState.currentUser = null;
     scoreActivities.clear();
@@ -276,6 +277,7 @@ function hideLoading(element) {
 }
 
 function showView(viewName) {
+    if (viewName !== 'games') window.BJKFlappy?.close();
     const changed = appState.currentView !== viewName;
     appState.currentView = viewName;
     renderDataActivity();
@@ -499,7 +501,10 @@ async function renderPrayers() {
 }
 
 function getUserAvatar(user) {
-    if (user && user.image) return user.image;
+    if (user && user.image) {
+        const image = String(user.image).trim();
+        return /^[a-zA-Z0-9_-]+\.png$/i.test(image) ? `game/img/${encodeURIComponent(image)}` : image;
+    }
     const name = user && user.name ? user.name : 'User';
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=128&color=fff`;
 }
@@ -630,6 +635,7 @@ function renderMessages() {
 }
 
 function renderLeaderboard() {
+    if (window.BJKGameSecurity?.blocked) return;
     const leaderboardList = document.getElementById('leaderboardList');
     if (!leaderboardList) return;
 
@@ -892,19 +898,21 @@ const requestLabels = {
     getLeaderboard: ['games', 'Edetabelit laetakse…'], saveScore: ['games', 'Tulemust salvestatakse…']
 };
 const pendingReads = new Map();
-function callAppsScript(action, payload = {}) {
+function callAppsScript(action, payload = {}, scorePermit) {
+    if (action === 'saveScore' && !window.BJKGameSecurity.check()) return Promise.resolve({ success: false, blocked: true });
     const key = JSON.stringify([appState.sessionToken, action, payload]);
     const isRead = action.startsWith('get');
     if (isRead && pendingReads.has(key)) return pendingReads.get(key);
     const request = (async () => {
         const [scope, label] = requestLabels[action] || ['account', 'Andmeid uuendatakse…'];
         const retry = isRead ? () => {
+            if (action === 'getLeaderboard' && payload.game === 'bjk-flappy') return window.BJKFlappy?.refreshLeaderboard();
             if (action === 'getLeaderboard' && payload.game === 'bjk-memory') return window.BJKMemory?.refreshLeaderboard();
             return loadUserDependentData();
         } : undefined;
         const finish = action === 'saveScore' ? () => {} : beginDataActivity(scope, label, retry);
         try {
-            const result = await performAppsScriptRequest(action, payload);
+            const result = await performAppsScriptRequest(action, payload, scorePermit);
             finish(result?.success !== true);
             if (result?.success === true) updateDbTimestamp(new Date().toISOString());
             return result;
@@ -916,19 +924,27 @@ function callAppsScript(action, payload = {}) {
     }
     return request;
 }
-async function performAppsScriptRequest(action, payload = {}) {
+async function performAppsScriptRequest(action, payload = {}, scorePermit) {
+    const security = window.BJKGameSecurity;
+    if (action === 'saveScore' && !security.authorize('request', payload.game, payload.score, scorePermit)) {
+        return { success: false, blocked: true };
+    }
     if (!GOOGLE_SHEET_ENDPOINT) {
         return { success: false, error: 'Google Sheets endpoint is not configured.' };
     }
 
     const body = {
-        action,
         token: appState.sessionToken || '',
-        ...payload
+        ...payload,
+        action
     };
 
+    const controller = new AbortController();
+    const untrack = action === 'saveScore' ? security.trackRequest(controller) : () => {};
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    try {
     const response = await fetch(GOOGLE_SHEET_ENDPOINT, {
-        signal: AbortSignal.timeout(20000),
+        signal: controller.signal,
         method: 'POST',
         redirect: 'follow',
         headers: {
@@ -945,27 +961,62 @@ async function performAppsScriptRequest(action, payload = {}) {
     if (!json || json.success !== true) {
         return { success: false, error: json && json.error ? json.error : 'Request failed.' };
     }
+    if (action === 'saveScore' && !security.check()) return { success: false, blocked: true };
     return json;
+    } finally { clearTimeout(timeout); untrack(); }
 }
 
 // Persist before sending so navigation and network failures cannot lose a result.
+(function () {
+const security = window.BJKGameSecurity;
+const guard = security.register('portal');
+const pageScoreIds = new Set();
+const serializeScores = JSON.stringify;
+// Capture the actual API entry points; replacing them must not bypass checks.
+guard.monitor(() => callAppsScript);
+guard.monitor(() => performAppsScriptRequest);
 const PENDING_SCORES_KEY = 'bjkPendingScoresV2';
 let scoreSyncPromise = null;
 let volatileScores = [];
+let trustedScores = [];
 let scoreStorageUnavailable = false;
+let expectedStorage;
+try { expectedStorage = localStorage.getItem(PENDING_SCORES_KEY); } catch (_) {}
+function storageUnchanged() {
+    try {
+        if (localStorage.getItem(PENDING_SCORES_KEY) !== expectedStorage) {
+            security.block('Pending scores changed outside the score queue');
+            return false;
+        }
+    } catch (_) {}
+    return true;
+}
+// A real storage event comes from another tab. Synthetic events cannot bless edits.
+window.addEventListener('storage', event => {
+    if (event.isTrusted && event.key === PENDING_SCORES_KEY) expectedStorage = event.newValue;
+});
+guard.monitor(() => {
+    try { return localStorage.getItem(PENDING_SCORES_KEY) === expectedStorage; } catch (_) { return true; }
+});
 
 function readPendingScores() {
     if (scoreStorageUnavailable) return volatileScores;
     try {
         const list = JSON.parse(localStorage.getItem(PENDING_SCORES_KEY) || '[]');
-        return Array.isArray(list) ? list : [];
+        const scores = Array.isArray(list) ? list : [];
+        if (!security.blocked && localStorage.getItem(PENDING_SCORES_KEY) === expectedStorage) trustedScores = scores;
+        return scores;
     } catch (e) { return volatileScores; }
 }
 
 function writePendingScores(list) {
+    if (!security.check()) return false;
     volatileScores = list;
+    trustedScores = list;
     try {
-        localStorage.setItem(PENDING_SCORES_KEY, JSON.stringify(list));
+        const serialized = JSON.stringify(list);
+        localStorage.setItem(PENDING_SCORES_KEY, serialized);
+        expectedStorage = serialized;
         scoreStorageUnavailable = false;
         return true;
     } catch (e) { scoreStorageUnavailable = true; return false; }
@@ -976,6 +1027,7 @@ function setScoreStatus(game, state, message) {
 }
 
 function applySavedScore(item, result) {
+    if (!security.check()) return;
     if (String(appState.currentUser?.id) !== item.userId) return;
     if (item.game === 'bjker-mario') {
         appState.currentUser.bestScore = Math.max(Number(appState.currentUser.bestScore || 0), Number(result.data.bestScore));
@@ -984,6 +1036,8 @@ function applySavedScore(item, result) {
         renderLeaderboard();
         const el = document.getElementById('bestScoreBoard');
         if (el) el.textContent = appState.currentUser.bestScore;
+    } else if (item.game === 'bjk-flappy') {
+        window.BJKFlappy?.renderLeaderboard(result.data.leaderboard);
     } else if (window.BJKMemory?.renderLeaderboard) {
         window.BJKMemory.renderLeaderboard(result.data.leaderboard);
     }
@@ -991,10 +1045,11 @@ function applySavedScore(item, result) {
 }
 
 function processPendingScores() {
+    if (!security.check() || !storageUnchanged()) return Promise.resolve();
     if (scoreSyncPromise) return scoreSyncPromise;
     scoreSyncPromise = (async () => {
         const attempted = new Set();
-        while (appState.currentUser && appState.sessionToken) {
+        while (security.check() && appState.currentUser && appState.sessionToken) {
             const item = readPendingScores().find(item => item.userId === String(appState.currentUser.id) && !attempted.has(item.id));
             if (!item) break;
             attempted.add(item.id);
@@ -1002,8 +1057,9 @@ function processPendingScores() {
             setScoreStatus(item.game, 'saving', 'Tulemust salvestatakse…');
             let result;
             try {
-                result = await callAppsScript('saveScore', { game: item.game, score: item.score, token });
+                result = await callAppsScript('saveScore', { game: item.game, score: item.score, token }, guard.requestPermit(item.game, item.score));
             } catch (e) { result = null; }
+            if (!security.check()) return;
             if (result?.success === true && Number.isFinite(Number(result.data?.bestScore))) {
                 // Remove only the acknowledged entry, preserving scores queued during the request.
                 writePendingScores(readPendingScores().filter(entry => entry.id !== item.id));
@@ -1019,14 +1075,17 @@ function processPendingScores() {
     return scoreSyncPromise;
 }
 
-async function saveScoreWithFallback(game, score) {
+async function saveScoreWithFallback(game, score, permit) {
+    if (!security.authorize('score', game, score, permit)) return { success: false, blocked: true };
     if (!appState.currentUser?.id || !Number.isFinite(Number(score))) return { success: false };
     const item = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
         userId: String(appState.currentUser.id), game, score: Number(score)
     };
+    pageScoreIds.add(item.id);
     const durable = writePendingScores([...readPendingScores(), item]);
     await processPendingScores();
+    if (!security.check()) return { success: false, blocked: true };
     const queued = readPendingScores().some(entry => entry.id === item.id);
     if (queued && !durable) setScoreStatus(game, 'pending', 'Salvestamine ebaõnnestus. Hoia leht avatuna; proovime uuesti.');
     return { success: !queued, queued };
@@ -1034,7 +1093,18 @@ async function saveScoreWithFallback(game, score) {
 
 window.addEventListener('online', () => { processPendingScores().catch(console.warn); });
 setInterval(() => { processPendingScores().catch(console.warn); }, 15000);
-window.saveScoreWithFallback = saveScoreWithFallback;
+readPendingScores(); // Snapshot the pre-existing queue before any game can submit.
+guard.bindSaver(saveScoreWithFallback);
+security.publish('saveScoreWithFallback', saveScoreWithFallback);
+security.publish('processPendingScores', processPendingScores);
+// Discard this page's unsent results on compromise, including a pending retry.
+// This is cleanup only, never a persisted ban or cheater flag.
+guard.onBlock(() => {
+    const remaining = trustedScores.filter(item => !pageScoreIds.has(item.id));
+    volatileScores = remaining;
+    try { localStorage.setItem(PENDING_SCORES_KEY, serializeScores(remaining)); } catch (_) {}
+});
+})();
 
 
 function setUpEventBindings() {
@@ -1064,14 +1134,21 @@ function setUpEventBindings() {
 
 // Games UI helpers
 function showGamesList() {
+    window.BJKFlappy?.close();
     document.querySelectorAll('.game-subview').forEach(el=>el.classList.add('hidden'));
     document.getElementById('gamesList')?.classList.remove('hidden');
 }
 
 function openGameSubView(gameId) {
+    if (!window.BJKGameSecurity.check()) return;
+    if (gameId !== 'bjk-flappy') window.BJKFlappy?.close();
     document.getElementById('gamesList')?.classList.add('hidden');
     document.querySelectorAll('.game-subview').forEach(el=>el.classList.add('hidden'));
-    if (gameId==='bjker-mario') {
+    if (gameId==='bjk-flappy') {
+        document.getElementById('subview-bjk-flappy')?.classList.remove('hidden');
+        window.BJKFlappy?.init();
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    } else if (gameId==='bjker-mario') {
         document.getElementById('subview-bjker-mario')?.classList.remove('hidden');
         // ensure Mario UI is visible (existing game uses same ids)
     } else if (gameId==='bjk-memory') {
@@ -1157,11 +1234,8 @@ async function initializeApp() {
 
 window.addEventListener('DOMContentLoaded', initializeApp);
 
-window.addEventListener('bjk-best-score', (event) => {
-    const score = Number(event.detail?.score);
-    if (!appState.currentUser || event.detail?.user !== appState.currentUser.name || !Number.isFinite(score) || score <= 0) return;
-    saveScoreWithFallback('bjker-mario', score).catch(console.warn);
-});
+// Mario now submits through its private capability; public score events are forged.
+window.addEventListener('bjk-best-score', () => window.BJKGameSecurity.block('Forged Mario score event'));
 
 window.addEventListener('bjk-store-current-user', () => {
     if (appState.currentUser) {
