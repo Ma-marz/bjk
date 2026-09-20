@@ -177,4 +177,4 @@ body:has(#appScreen.hidden) .site-footer { padding-bottom: 24px; }
 .prayer-toolbar { flex-wrap: wrap; gap: 12px; }
 
 /* A page-session block is separate from dismissible activity notices. */
-.game-security-message { position: fixed; top: 1rem; left: 50%; transform: translateX(-50%); z-index: 10000; width: min(90vw, 42rem); padding: 1rem 1.25rem; border: 1px solid #a44932; border-radius: 12px; background: #fff1e6; color: #743221; box-shadow: 0 8px 30px #40271930; font-weight: 600; text-align: center; }
+.game-security-message { margin: 0 0 1rem; padding: 1rem 1.25rem; border: 1px solid #a44932; border-radius: 12px; background: #fff1e6; color: #743221; box-shadow: 0 8px 30px #40271930; font-weight: 600; text-align: center; }

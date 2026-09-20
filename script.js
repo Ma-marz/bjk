@@ -1140,13 +1140,13 @@ function showGamesList() {
 }
 
 function openGameSubView(gameId) {
-    if (!window.BJKGameSecurity.check()) return;
+    const canPlay = window.BJKGameSecurity.check();
     if (gameId !== 'bjk-flappy') window.BJKFlappy?.close();
     document.getElementById('gamesList')?.classList.add('hidden');
     document.querySelectorAll('.game-subview').forEach(el=>el.classList.add('hidden'));
     if (gameId==='bjk-flappy') {
         document.getElementById('subview-bjk-flappy')?.classList.remove('hidden');
-        window.BJKFlappy?.init();
+        if (canPlay) window.BJKFlappy?.init();
         window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     } else if (gameId==='bjker-mario') {
         document.getElementById('subview-bjker-mario')?.classList.remove('hidden');
@@ -1154,10 +1154,11 @@ function openGameSubView(gameId) {
     } else if (gameId==='bjk-memory') {
         document.getElementById('subview-bjk-memory')?.classList.remove('hidden');
         // init memory if available
-        if (window.BJKMemory && typeof window.BJKMemory.init === 'function') {
+        if (canPlay && window.BJKMemory && typeof window.BJKMemory.init === 'function') {
             window.BJKMemory.init();
         }
     }
+    window.BJKGameSecurity.showBlock();
 }
 
 // wire play buttons and back buttons after DOM ready

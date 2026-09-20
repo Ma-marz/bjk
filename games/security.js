@@ -22,14 +22,17 @@
   let blocked = false, reason = '', submitScore;
 
   function showBlock() {
+    if (!blocked) return;
+    const view = document.querySelector('#view-games .game-subview:not(.hidden)');
+    if (!view) return;
     let banner = document.getElementById('gameSecurityMessage');
     if (!banner) {
       banner = document.createElement('div');
       banner.id = 'gameSecurityMessage';
       banner.setAttribute('role', 'alert');
       banner.className = 'game-security-message';
-      document.body.appendChild(banner);
     }
+    if (banner.parentElement !== view) view.querySelector('.game-header').after(banner);
     banner.textContent = message;
     document.querySelectorAll('#game, #memoryBoard, #flappyStage').forEach(el => el.setAttribute('inert', ''));
   }
@@ -57,7 +60,12 @@
         if (!watch.node.isConnected || watch.observer.takeRecords().length) return block(`${client.id}: gameplay DOM changed`);
       }
       for (const monitor of client.monitors) {
-        if (monitor.read() !== monitor.expected) return block(`${client.id}: gameplay state changed`);
+        // display:none changes computed transforms/geometry without any edit.
+        // Keep the last rendered baseline while hidden; do not learn 'none'.
+        if (!monitor.when()) continue;
+        const value = monitor.read();
+        if (!monitor.ready) { monitor.expected = value; monitor.ready = true; }
+        else if (value !== monitor.expected) return block(`${client.id}: ${monitor.label} changed`);
       }
     }
     return true;
@@ -100,7 +108,9 @@
         client.depth--;
         if (!client.depth && !blocked) {
           for (const watch of client.watches) watch.observer.takeRecords();
-          for (const monitor of client.monitors) monitor.expected = monitor.read();
+          for (const monitor of client.monitors) {
+            if (monitor.when()) { monitor.expected = monitor.read(); monitor.ready = true; }
+          }
         }
       }
     }
@@ -112,7 +122,10 @@
         observer.observe(node, options);
         client.watches.push({ node, observer });
       },
-      monitor(read) { client.monitors.push({ read, expected: read() }); },
+      monitor(read, { when = () => true, label = 'gameplay state' } = {}) {
+        const ready = Boolean(when());
+        client.monitors.push({ read, when, label, ready, expected: ready ? read() : undefined });
+      },
       // CSSOM edits in the Styles panel do not produce DOM mutations. Monitor
       // authored rules for game selectors, independent of viewport/media state.
       styles(pattern) {
@@ -161,14 +174,14 @@
   }
   const api = {
     get blocked() { return blocked; }, get reason() { return reason; },
-    check, block, register, publish, readonly, authorize,
+    check, block, showBlock, register, publish, readonly, authorize,
     trackRequest(controller) { if (blocked) controller.abort(); else requests.add(controller); return () => requests.delete(controller); }
   };
   publish('BJKGameSecurity', api);
   interval(check, 100);
   // Navigation remains usable. A removed banner cannot re-enable any game.
   document.addEventListener('click', event => {
-    if (blocked && event.target.closest('.play-game-button, #game, #memoryBoard, #memoryRestart, #flappyStage')) {
+    if (blocked && event.target.closest('#game, #memoryBoard, #memoryRestart, #flappyStage')) {
       event.preventDefault(); event.stopImmediatePropagation(); showBlock();
     }
   }, true);

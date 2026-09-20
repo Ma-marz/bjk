@@ -257,7 +257,7 @@ guard.monitor(() => [character, obstacle].map(node => {
     const css = getComputedStyle(node);
     return [css.width, css.height, css.bottom, css.transform, css.position,
         node === character ? css.left : '', css.opacity, css.visibility].join('|');
-}).join(';'));
+}).join(';'), { when: () => Boolean(game?.getClientRects().length), label: 'rendered collision geometry' });
 guard.watch(game, { attributes: true });
 [character, obstacle, floor, score_board].forEach(node => guard.watch(node));
 [jump, moveObstacle, setObsParams, changeFloor, restart, saveBestScore, fixPlayerHeight, getRandomInt, isLevelUp, setAllParam, updateScoreDisplay, updateSkyCycle].forEach((fn, i) =>

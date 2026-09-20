@@ -288,6 +288,7 @@ guard.styles(/memory-card|memoryBoard|memory-board|memoryTime|memoryAttempts/);
 guard.monitor(() => JSON.stringify([startTime, elapsed, attempts, lock, matches,
   totalPairs, cards, boardVersion, firstCard?.card, timerInterval]));
 guard.monitor(() => firstCard?.el);
+// Check face styles only while rendered: hidden cards report transform:none.
 // These face properties do not animate when cards flip or resize. They catch
 // broad injected CSS (e.g. '* { backface-visibility: visible }') as well.
 guard.monitor(() => {
@@ -298,7 +299,8 @@ guard.monitor(() => {
     return [css.backfaceVisibility, css.transformStyle, css.opacity, css.visibility,
       selector === '.inner' ? '' : css.transform].join('|');
   }).join(';');
-});
+}, { when: () => Boolean(boardEl?.querySelector('.memory-card')?.getClientRects().length),
+  label: 'rendered card styles' });
 guard.onBlock(() => { stopTimer(); lock = true; boardVersion++; });
 security.publish('BJKMemory', { init: guard.wrap(setup), refreshLeaderboard: guard.wrap(refreshLeaderboard),
   renderLeaderboard: guard.wrap(list => {

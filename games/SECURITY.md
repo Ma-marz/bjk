@@ -29,13 +29,18 @@ Protection covers:
 
 MutationObserver checks catch outside DOM changes, including changes restored in
 the same task. CSSOM and private-state checks run before guarded callbacks and
-on a 100 ms heartbeat. Core clocks, scheduling functions and arithmetic helpers
+on a 100 ms heartbeat. Computed-style monitors run only while the game is
+rendered, retaining their last visible baseline while hidden. Browsers report
+`transform: none` for hidden Memory faces; navigation must not turn that normal
+layout change into a tamper signal. Private state, DOM and authored stylesheet
+checks remain active when a game is hidden. Core clocks, scheduling functions and arithmetic helpers
 are also checked for replacement. No elapsed-time-gap heuristic is used, so a
 background tab or debugger pause alone is not treated as cheating.
 
 The shared compromised flag lives in a closure and has no reset method. Detection
-cancels game timers/animation, rejects callbacks and navigation into games, and
-shows a persistent Estonian message. Restarting, switching games or logging out
+cancels game timers/animation and rejects gameplay callbacks. Navigation stays
+available: the Estonian message appears inside the selected game and is hidden
+on other pages and the games list. Restarting, switching games or logging out
 cannot reset it. A full document reload creates a new session. No backend ban or
 cheater flag is written.
 
@@ -74,7 +79,8 @@ image-load retries and normal score submissions should continue to work.
 
 Automated browser checks: serve the repo locally on port 8000, then run
 `node tests/game-security.test.cjs`, `node tests/flappy-browser.test.cjs`, and
-`node tests/game-reliability.test.cjs`. API calls in these tests are mocked.
+`node tests/game-reliability.test.cjs`. Navigation/hidden-layout regressions run
+with `node tests/game-security-navigation.test.cjs`. API calls in these tests are mocked.
 Score queue acknowledgement/offline tests run with
 `node --test tests/score-persistence.test.cjs`.
 
