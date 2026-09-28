@@ -1,7 +1,7 @@
 """Generate template-based prayer PDFs with persistent, independent weekly draws."""
 import argparse
+from contextlib import contextmanager
 from datetime import date
-import fcntl
 from io import BytesIO
 import json
 import os
@@ -12,6 +12,29 @@ import tempfile
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_OUTPUT = HERE.parents[1] / "prayer"
+
+if os.name == "nt":
+    import msvcrt
+else:
+    import fcntl
+
+
+@contextmanager
+def locked_file(path):
+    with Path(path).open("a") as lock:
+        if os.name == "nt":
+            lock.seek(0)
+            msvcrt.locking(lock.fileno(), msvcrt.LK_LOCK, 1)
+        else:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            yield lock
+        finally:
+            if os.name == "nt":
+                lock.seek(0)
+                msvcrt.locking(lock.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(lock, fcntl.LOCK_UN)
 
 
 def validate_config(config):
@@ -140,8 +163,7 @@ def generate(config_path, template_path, history_path, output):
     history_path = Path(history_path)
     history_path.parent.mkdir(parents=True, exist_ok=True)
     # Serialize runs so two invocations cannot save different draws for one week.
-    with history_path.with_suffix(".lock").open("a") as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+    with locked_file(history_path.with_suffix(".lock")):
         history = json.loads(history_path.read_text(encoding="utf-8")) if history_path.exists() else {
             "version": 1, "cycles": [], "weeks": {}}
         record = plan_week(history, week, names)
