@@ -139,6 +139,38 @@
         "Katariina Petermann": "Markus Martin",
         "Linnea Süvari": "Paul Kask"
       }
+    },
+    "28": {
+      "week": 28,
+      "date": "2026-10-04",
+      "names": [
+        "Anett Marvet",
+        "Eliisabet Toodo",
+        "Katariina Petermann",
+        "Karolina Louise Schultz",
+        "Linnea Süvari",
+        "Markus Martin",
+        "Stefan Carl Seppel",
+        "Paul Kask",
+        "Leo Kask",
+        "Ott Rahuvarm",
+        "Kristofer Petermann"
+      ],
+      "cycle_start": 25,
+      "offset": 1,
+      "assignments": {
+        "Kristofer Petermann": "Eliisabet Toodo",
+        "Eliisabet Toodo": "Karolina Louise Schultz",
+        "Karolina Louise Schultz": "Markus Martin",
+        "Markus Martin": "Paul Kask",
+        "Paul Kask": "Anett Marvet",
+        "Anett Marvet": "Stefan Carl Seppel",
+        "Stefan Carl Seppel": "Leo Kask",
+        "Leo Kask": "Ott Rahuvarm",
+        "Ott Rahuvarm": "Katariina Petermann",
+        "Katariina Petermann": "Linnea Süvari",
+        "Linnea Süvari": "Kristofer Petermann"
+      }
     }
   }
 }
