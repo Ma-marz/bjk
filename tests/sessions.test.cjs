@@ -109,3 +109,36 @@ test('requests keep the active identity instead of importing another tabs stored
   assert.deepEqual(bodies.map(body => body.token), ['active-device', 'captured-token', '']);
   assert.equal(state.sessionToken, '');
 });
+
+test('rejected saved sessions return to login instead of leaving an empty portal', async () => {
+  for (const error of ['Invalid session.', 'Authentication required.']) {
+    const state = { sessionToken: 'expired-token' };
+    let cleared = 0, rendered = 0, notice;
+    const c = vm.createContext({
+      appState: state, getAppsScriptEndpoint: async () => 'https://example.test', AbortController,
+      setTimeout, clearTimeout, window: { BJKGameSecurity: {} },
+      fetch: async () => ({ ok: true, json: async () => ({ success: false, error }) }),
+      clearSession() { state.sessionToken = ''; cleared++; },
+      renderAuthenticatedState() { rendered++; }, showMessage(...args) { notice = args; }
+    });
+    vm.runInContext(frontend.slice(frontend.indexOf('async function performAppsScriptRequest'), frontend.indexOf('// Persist before sending')), c);
+    await c.performAppsScriptRequest('getInbox');
+    assert.equal(cleared, 1);
+    assert.equal(rendered, 1);
+    assert.equal(notice[0], 'error');
+    assert.equal(state.sessionToken, '');
+  }
+});
+
+test('a late authentication failure cannot log out a newly signed-in account', async () => {
+  const state = { sessionToken: 'new-token' };
+  const c = vm.createContext({
+    appState: state, getAppsScriptEndpoint: async () => 'https://example.test', AbortController,
+    setTimeout, clearTimeout, window: { BJKGameSecurity: {} },
+    fetch: async () => ({ ok: true, json: async () => ({ success: false, error: 'Invalid session.' }) }),
+    clearSession() { assert.fail('Must preserve new session'); }
+  });
+  vm.runInContext(frontend.slice(frontend.indexOf('async function performAppsScriptRequest'), frontend.indexOf('// Persist before sending')), c);
+  await c.performAppsScriptRequest('getInbox', { token: 'old-token' });
+  assert.equal(state.sessionToken, 'new-token');
+});

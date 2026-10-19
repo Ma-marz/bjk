@@ -1144,7 +1144,14 @@ async function performAppsScriptRequest(action, payload = {}, scorePermit) {
 
     const json = await response.json().catch(() => ({}));
     if (!json || json.success !== true) {
-        return { success: false, error: json && json.error ? json.error : 'Request failed.' };
+        const error = json && json.error ? json.error : 'Request failed.';
+        if (body.token && appState.sessionToken === body.token &&
+            (error === 'Invalid session.' || error === 'Authentication required.')) {
+            clearSession();
+            renderAuthenticatedState();
+            showMessage('error', 'Sinu sisselogimine on aegunud. Palun logi uuesti sisse.', 'error');
+        }
+        return { success: false, error };
     }
     if (action === 'saveScore' && !security.check()) return { success: false, blocked: true };
     return json;
