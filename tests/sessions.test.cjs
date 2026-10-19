@@ -24,11 +24,10 @@ function server() {
   Object.assign(c, {
     migrateJsonDatabase() {},
     hashPassword: password => `hash:${password}`,
-    getUserByName: name => name === user.name ? user : null,
     getUserById: id => id === user.id ? user : null,
     getUsersList: () => [c.toSafeUser(user)],
     getLeaderboard: () => [],
-    getSheetRows: name => name === 'Sessions' ? sessions.map(row => ({ ...row })) : [],
+    getSheetRows: name => name === 'Sessions' ? sessions.map(row => ({ ...row })) : name === 'Users' ? [user] : [],
     appendRow(name, record) { assert.equal(locked, true); sessions.push({ ...record }); },
     ensureSchema: () => ({ deleteRow(number) {
       assert.equal(locked, true);
@@ -141,4 +140,18 @@ test('a late authentication failure cannot log out a newly signed-in account', a
   vm.runInContext(frontend.slice(frontend.indexOf('async function performAppsScriptRequest'), frontend.indexOf('// Persist before sending')), c);
   await c.performAppsScriptRequest('getInbox', { token: 'old-token' });
   assert.equal(state.sessionToken, 'new-token');
+});
+
+
+test('login ignores username casing and whitespace but preserves password casing and display name', () => {
+  const s = server();
+  for (const name of ['Test', 'test', 'TEST', 'tEsT', '  test  ']) {
+    const response = s.request('login', { name, password: 'password' });
+    assert.equal(response.success, true, response.error);
+    assert.equal(response.data.user.name, 'Test');
+    assert.equal(response.data.user.id, 'user-a');
+  }
+  assert.equal(s.request('login', { name: 'TEST', password: 'PASSWORD' }).success, false);
+  assert.equal(s.request('login', { name: 'unknown', password: 'password' }).success, false);
+  assert.equal(s.request('login', { name: '   ', password: 'password' }).success, false);
 });

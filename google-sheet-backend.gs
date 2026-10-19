@@ -156,8 +156,9 @@ function getUserById(id) {
 
 function getUserByName(name) {
   if (!name) return null;
-  const normalized = String(name).trim();
-  return findRowByColumn('Users', 'name', normalized) || null;
+  const normalized = String(name).trim().toLowerCase();
+  if (!normalized) return null;
+  return getSheetRows('Users').find(user => String(user.name || '').trim().toLowerCase() === normalized) || null;
 }
 
 function getSessionByToken(token) {
