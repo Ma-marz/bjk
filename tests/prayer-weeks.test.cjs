@@ -35,7 +35,7 @@ test('returning to prayers opens the newest PDF instead of the previous selectio
       getElementById: id => id === 'prayerSelect' ? select : null,
       createElement: () => ({}), querySelectorAll: () => []
     },
-    hideOpenPdfButton() {}, renderDataActivity() {}, setActivityResult() {},
+    hideOpenPdfButton() {}, renderDataActivity() {}, setActivityResult() {}, refreshChatMessages() {},
     loadPDF: async url => loaded.push(url)
   });
   vm.runInContext(source.slice(source.indexOf('function showView'), source.indexOf('let pdfRendererPromise')), c);

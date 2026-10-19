@@ -41,7 +41,7 @@ const assert = require('node:assert/strict');
     assert.equal(calls.filter(a => a === 'getUsers' || a === 'getLeaderboard').length, 0);
     assert.equal(calls.filter(a => a === 'getInbox').length, 1);
     await page.click('[data-view="messages"]');
-    await page.selectOption('#recipientSelect', 'other');
+    await page.click('.conversation[data-user-id="other"]');
     await page.fill('#messageText', 'Preserve this draft');
     failSend = true;
     await page.click('#sendMessageButton');

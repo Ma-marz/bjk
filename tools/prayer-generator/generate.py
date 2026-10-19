@@ -192,6 +192,9 @@ def main():
     args = parser.parse_args()
     try:
         generate(args.config, args.template, args.history, args.output)
+        if args.config.resolve() == (HERE / 'config.json').resolve() and args.output.resolve() == DEFAULT_OUTPUT.resolve():
+            from sync_config import sync_config
+            sync_config()
     except (ValueError, OSError, ImportError, KeyError) as error:
         parser.exit(1, f"Generation failed: {error}\n")
 

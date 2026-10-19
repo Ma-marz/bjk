@@ -28,3 +28,28 @@ Manage deployments → Edit → New version → Deploy. Update the existing depl
 to keep the endpoint URL unchanged. Pushing this file to GitHub alone does not
 update the running backend. Existing valid session rows can stay; devices whose
 tokens were revoked by the old login behavior need to log in again.
+
+Chat unread state is saved per user and conversation in `ChatReads`
+(`id`, `userId`, `peerId`, `lastReadAt`). The sheet is created automatically by
+`initDatabase()` or the first inbox/read request after deploying the updated
+Apps Script. Existing messages are preserved and initially count as unread until
+their conversation is opened. Read checkpoints only advance through incoming
+messages displayed in an open conversation, and sync across devices. The portal
+checks for new messages every 5 seconds while a conversation is open, and every
+15 seconds elsewhere while the browser tab is visible. Switching conversations
+triggers an immediate refresh.
+
+The site loads its Apps Script URL from `google_sheet_endpoint` in
+`tools/prayer-generator/config.json`, alongside the prayer generation parameters.
+Change that value when switching deployments and reload the portal.
+
+Directly opening `index.html` uses a generated endpoint embedded in the page,
+because browsers block fetching local JSON files. After changing
+`google_sheet_endpoint` in `tools/prayer-generator/config.json`, run:
+
+```sh
+python3 tools/prayer-generator/sync_config.py
+```
+
+Normal prayer generation also syncs this fallback automatically. Over HTTP,
+the portal reads the JSON configuration directly.

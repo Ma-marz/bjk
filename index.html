@@ -87,39 +87,24 @@
                 </div>
 
                 <div id="view-messages" class="view-panel hidden">
-                    <div class="section-heading">
-                        <div><span class="eyebrow"></span><h2>Kirjakast</h2><p>Aga kes prohvetlikult kõneleb, see kõneleb inimestele nende ehitamiseks ja julgustamiseks ja lohutamiseks.<br>(1.Kor 14:3)</p></div><svg class="heading-compass icon" aria-hidden="true"><use href="#icon-compass"/></svg>
-                    </div>
-
-                    <form id="messageForm" class="message-form"><!-- <h3></h3> -->
-                        <label for="recipientSelect">Saaja</label>
-                        <select id="recipientSelect">
-                            <option value="" disabled selected>Vali saaja</option>
-                        </select>
-
-                        <label for="messageText">Sõnum</label>
-                        <textarea id="messageText" rows="4" maxlength="10000" placeholder="Kirjuta sõnum..."></textarea>
-
-                        <div id="messageFormError" class="message error hidden" aria-live="polite"></div>
-                        <div id="messageFormLoading" class="hidden" aria-hidden="true"></div>
-                        <button id="sendMessageButton" type="submit" class="primary-button">Saada</button>
-                    </form>
-
-                    <!-- Mobile tabs (shown on small screens) -->
-                    <div id="messageTabs" class="message-tabs hidden" role="tablist">
-                        <button id="msgTabReceived" class="tab-button active" type="button" role="tab" aria-selected="true">Saabunud</button>
-                        <button id="msgTabSent" class="tab-button" type="button" role="tab" aria-selected="false">Saadetud</button>
-                    </div>
-
-                    <div class="message-columns">
-                        <div id="receivedBox" class="message-box">
-                            <h3>Saabunud</h3>
-                            <div id="receivedMessages" class="message-list"></div>
-                        </div>
-                        <div id="sentBox" class="message-box">
-                            <h3>Saadetud</h3>
-                            <div id="sentMessages" class="message-list"></div>
-                        </div>
+                    <div id="chatShell" class="chat-shell">
+                        <aside class="chat-sidebar" aria-label="Vestlused">
+                            <div class="chat-sidebar-heading"><h3>Vestlused</h3><button id="refreshChats" class="ghost-button" type="button">Värskenda</button></div>
+                            <label class="visually-hidden" for="chatSearch">Otsi inimest</label>
+                            <input id="chatSearch" type="search" placeholder="Otsi inimest…" autocomplete="off">
+                            <div id="conversationList" class="conversation-list"></div>
+                        </aside>
+                        <section class="chat-thread" aria-label="Valitud vestlus">
+                            <header class="chat-header"><button id="chatBack" class="ghost-button" type="button" aria-label="Tagasi vestluste juurde">←</button><span id="chatProfile"></span><div><h3 id="chatName">Vali vestlus</h3><span id="chatSubtitle">Sinu sõnumid, ühes kohas</span></div></header>
+                            <div id="chatMessages" class="chat-messages" role="log" aria-label="Vestluse sõnumid" aria-live="polite" tabindex="0"></div>
+                            <form id="messageForm" class="chat-composer">
+                                <label class="visually-hidden" for="messageText">Sõnum</label>
+                                <textarea id="messageText" rows="2" maxlength="10000" placeholder="Kirjuta sõnum…" disabled></textarea>
+                                <button id="sendMessageButton" type="submit" class="primary-button" disabled>Saada ↑</button>
+                                <div id="messageFormError" class="message error hidden" aria-live="polite"></div>
+                                <div id="messageFormLoading" class="hidden" aria-hidden="true"></div>
+                            </form>
+                        </section>
                     </div>
                 </div>
 
@@ -246,8 +231,9 @@
         <footer class="site-footer"><span>BjK</span><span>nojeh, kes see nimetab oma sõpruspundi Balta järgi?</span></footer>
     </div>
 
-    <script>
-        window.BJK_GOOGLE_SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwCG03usaMDEVdu75NDNj1F-5azAsgZHoyDw4DMWSSzi70kOL4cAL1qwyHSohO2wSiW/exec';
+    <script id="fileEndpointConfig">
+        // Generated from tools/prayer-generator/config.json by sync_config.py.
+        window.BJK_FILE_ENDPOINT = "https://script.google.com/macros/s/AKfycbz99MobarcMZIaB2K_sYXMrQcys8APqFXq2g7OXXAnP_J0ySco_6meYNvf6CDnmJHmY/exec";
     </script>
     <script src="prayer/available-weeks.js"></script>
     <script src="games/security.js"></script>

@@ -17,7 +17,29 @@ const appState = {
 appState.showSessionBadge = false;
 appState.lastDbUpdate = null;
 
-const GOOGLE_SHEET_ENDPOINT = window.BJK_GOOGLE_SHEET_ENDPOINT || '';
+let endpointConfigPromise;
+async function getAppsScriptEndpoint() {
+    // Browsers block fetch() of local JSON on file:// pages.
+    if (location.protocol === 'file:') {
+        if (window.BJK_FILE_ENDPOINT) return window.BJK_FILE_ENDPOINT;
+        throw new Error('Local endpoint is missing. Run python3 tools/prayer-generator/sync_config.py.');
+    }
+    if (!endpointConfigPromise) {
+        endpointConfigPromise = (async () => {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 10000);
+            try {
+                const response = await fetch('tools/prayer-generator/config.json', { cache: 'no-store', signal: controller.signal });
+                if (!response.ok) throw new Error('Site configuration could not be loaded.');
+                const config = await response.json();
+                const endpoint = config.google_sheet_endpoint;
+                if (typeof endpoint !== 'string' || !endpoint.trim()) throw new Error('google_sheet_endpoint is missing from tools/prayer-generator/config.json.');
+                return endpoint.trim();
+            } finally { clearTimeout(timeout); }
+        })().catch(error => { endpointConfigPromise = undefined; throw error; });
+    }
+    return endpointConfigPromise;
+}
 
 function hydrateStateFromStorage() {
     try {
@@ -85,6 +107,15 @@ function clearSession() {
     activityResults.clear();
     renderDataActivity();
     appState.users = [];
+    chatState.selectedId = '';
+    chatState.drafts.clear();
+    chatState.readTimes.clear();
+    chatState.pendingReads.clear();
+    chatState.readsLoaded = false;
+    document.querySelector('[data-view="messages"]')?.classList.remove('has-unread');
+    chatState.renderedKey = '';
+    document.getElementById('messageText').value = '';
+    document.getElementById('chatShell').classList.remove('thread-open');
     appState.sentMessages = [];
     appState.inboxMessages = [];
     appState.leaderboard = [];
@@ -292,6 +323,11 @@ function showView(viewName) {
         panel.classList.toggle('hidden', !shouldShow);
         panel.classList.toggle('active', shouldShow);
     });
+    if (changed && viewName === 'messages') {
+        refreshChatMessages();
+        const log = document.getElementById('chatMessages');
+        if (log) log.scrollTop = log.scrollHeight;
+    }
     if (changed) window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     if (changed && viewName === 'prayers' && appState.currentUser) {
         prayerRenderKey = '';
@@ -578,60 +614,196 @@ function formatDate(dateString) {
     }).format(date);
 }
 
-function renderMessages() {
-    const sentMessages = document.getElementById('sentMessages');
-    const receivedMessages = document.getElementById('receivedMessages');
-    const recipientSelect = document.getElementById('recipientSelect');
+const chatState = { selectedId: '', drafts: new Map(), sending: false, renderedKey: '', refreshing: false, lastRefreshAt: 0, readTimes: new Map(), pendingReads: new Map(), readsLoaded: false };
 
-    if (!sentMessages || !receivedMessages || !recipientSelect) return;
+function chatText(tag, className, text) {
+    const element = document.createElement(tag);
+    element.className = className;
+    element.textContent = text;
+    return element;
+}
 
-    recipientSelect.innerHTML = `
-        <option value="">Vali saaja</option>
-        ${appState.users
-            .filter((user) => user.id !== appState.currentUser.id)
-            .map((user) => `<option value="${user.id}">${user.name}</option>`)
-            .join('')}
-    `;
+function applyChatReadStates(states) {
+    if (!Array.isArray(states)) return;
+    states.forEach(state => chatState.readTimes.set(state.peerId,
+        Math.max(chatState.readTimes.get(state.peerId) || 0, Date.parse(state.lastReadAt) || 0)));
+    chatState.readsLoaded = true;
+}
 
-    const sent = Array.isArray(appState.sentMessages) ? appState.sentMessages : [];
-    const received = Array.isArray(appState.inboxMessages) ? appState.inboxMessages : [];
+function chatUnreadCount(person) {
+    const readAt = Math.max(chatState.readTimes.get(person.id) || 0, chatState.pendingReads.get(person.id) || 0);
+    return person.messages.filter(message => message.receiverId === appState.currentUser?.id && (Date.parse(message.createdAt) || 0) > readAt).length;
+}
 
-    // sort newest -> oldest by createdAt
-    const sortByDateDesc = (arr) => (arr || []).slice().sort((a, b) => {
-        const ta = a && a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const tb = b && b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return tb - ta;
-    });
-    const sentSorted = sortByDateDesc(sent);
-    const receivedSorted = sortByDateDesc(received);
+function chatIsVisible() {
+    return appState.currentView === 'messages' && !document.hidden &&
+        (!window.matchMedia('(max-width: 699px)').matches || document.getElementById('chatShell').classList.contains('thread-open'));
+}
 
-    sentMessages.innerHTML = sentSorted.length
-        ? sentSorted.map((message) => `
-            <div class="message-item">
-                <strong>${message.receiverName || 'Saaja'}</strong>
-                <div>${message.message}</div>
-                <small>${formatDate(message.createdAt)}</small>
-            </div>
-        `).join('')
-        : '<div class="message-item">Sõnumeid pole.</div>';
-
-    receivedMessages.innerHTML = receivedSorted.length
-        ? receivedSorted.map((message) => `
-            <div class="message-item">
-                <strong>${message.senderName || 'Saatja'}</strong>
-                <div>${message.message}</div>
-                <small>${formatDate(message.createdAt)}</small>
-            </div>
-        `).join('')
-        : '<div class="message-item">Sulle pole uusi sõnumeid.</div>';
-
-    // Ensure mobile tabs are visible and default to received messages
-    const tabs = document.getElementById('messageTabs');
-    if (tabs) {
-        tabs.classList.remove('hidden');
-        // default to received open
-        setMessageTab('received');
+async function markVisibleChatRead() {
+    if (!chatState.readsLoaded || !chatIsVisible() || !appState.sessionToken) return;
+    const person = getConversations().find(person => person.id === chatState.selectedId);
+    if (!person || !chatUnreadCount(person) || chatState.pendingReads.has(person.id)) return;
+    const latest = person.messages.filter(message => message.receiverId === appState.currentUser.id).at(-1);
+    if (!latest?.id) return;
+    const token = appState.sessionToken;
+    chatState.pendingReads.set(person.id, Date.parse(latest.createdAt) || 0);
+    renderMessages();
+    let saved = false;
+    try {
+        const result = await performAppsScriptRequest('markChatRead', { token, peerId: person.id, messageId: latest.id });
+        if (appState.sessionToken !== token) return;
+        if (result?.success && result.data?.lastReadAt) {
+            applyChatReadStates([result.data]);
+            saved = true;
+        }
+    } catch (_) { /* Retried on the next refresh; never discard an unsaved unread state. */ }
+    finally {
+        if (appState.sessionToken === token) {
+            chatState.pendingReads.delete(person.id);
+            renderMessages();
+            if (saved) markVisibleChatRead();
+        }
     }
+}
+
+function createChatAvatar(person) {
+    const avatar = chatText('span', 'chat-avatar', person.name.split(/\s+/).map(part => part[0]).slice(0, 2).join(''));
+    avatar.setAttribute('aria-hidden', 'true');
+    const image = document.createElement('img');
+    image.alt = '';
+    image.src = getUserAvatar(person);
+    image.addEventListener('error', () => image.remove(), { once: true });
+    avatar.append(image);
+    return avatar;
+}
+
+function getConversations() {
+    const me = appState.currentUser?.id;
+    if (!me) return [];
+    const people = new Map(appState.users.filter(user => user.id && user.id !== me)
+        .map(user => [user.id, { ...user, messages: [] }]));
+    const seen = new Set();
+    [...appState.sentMessages, ...appState.inboxMessages].forEach(message => {
+        if (message.senderId !== me && message.receiverId !== me) return;
+        if (message.id && seen.has(message.id)) return;
+        if (message.id) seen.add(message.id);
+        const outgoing = message.senderId === me;
+        const id = outgoing ? message.receiverId : message.senderId;
+        if (!id || id === me) return;
+        if (!people.has(id)) people.set(id, { id, name: (outgoing ? message.receiverName : message.senderName) || 'Kasutaja', messages: [] });
+        people.get(id).messages.push(message);
+    });
+    const timestamp = message => Date.parse(message?.createdAt) || 0;
+    people.forEach(person => person.messages.sort((a, b) => timestamp(a) - timestamp(b)));
+    return [...people.values()].sort((a, b) => timestamp(b.messages.at(-1)) - timestamp(a.messages.at(-1)) || a.name.localeCompare(b.name, 'et'));
+}
+
+function openConversation(id) {
+    if (chatState.selectedId) chatState.drafts.set(chatState.selectedId, document.getElementById('messageText').value);
+    chatState.selectedId = id;
+    chatState.renderedKey = '';
+    hideMessage('messageFormError');
+    document.getElementById('messageText').value = chatState.drafts.get(id) || '';
+    document.getElementById('chatShell').classList.add('thread-open');
+    renderMessages();
+    markVisibleChatRead();
+    refreshChatMessages();
+}
+
+function renderMessages() {
+    const list = document.getElementById('conversationList');
+    if (!list) return;
+    const conversations = getConversations();
+    const hasUnread = conversations.some(person => chatUnreadCount(person) > 0);
+    const nav = document.querySelector('[data-view="messages"]');
+    nav?.classList.toggle('has-unread', hasUnread);
+    nav?.setAttribute('aria-label', hasUnread ? 'Sõnumid · lugemata sõnumeid' : 'Sõnumid');
+    const query = document.getElementById('chatSearch').value.trim().toLocaleLowerCase('et');
+    list.replaceChildren();
+    conversations.filter(person => person.name.toLocaleLowerCase('et').includes(query)).forEach(person => {
+        const button = chatText('button', 'conversation' + (person.id === chatState.selectedId ? ' selected' : ''), '');
+        button.type = 'button';
+        button.dataset.userId = person.id;
+        button.setAttribute('aria-pressed', String(person.id === chatState.selectedId));
+        const unread = chatUnreadCount(person);
+        button.classList.toggle('unread', unread > 0);
+        if (unread) button.setAttribute('aria-label', `${person.name}, ${unread} lugemata sõnumit`);
+        const avatar = createChatAvatar(person);
+        const info = chatText('span', 'conversation-info', '');
+        info.append(chatText('strong', '', person.name));
+        const last = person.messages.at(-1);
+        info.append(chatText('span', 'conversation-preview', last ? (last.senderId === appState.currentUser.id ? 'Sina: ' : '') + last.message : 'Alusta vestlust'));
+        button.append(avatar, info);
+        if (unread) button.append(chatText('span', 'chat-unread-badge', String(unread)));
+        if (last) button.append(chatText('span', 'conversation-date', chatDate(last.createdAt, false)));
+        button.addEventListener('click', () => openConversation(person.id));
+        list.append(button);
+    });
+    if (!list.childElementCount) list.append(chatText('p', 'chat-empty', query ? 'Ühtegi inimest ei leitud.' : 'Vestluskaaslasi pole veel.'));
+    const person = conversations.find(person => person.id === chatState.selectedId);
+    document.getElementById('chatProfile').replaceChildren(...(person ? [createChatAvatar(person)] : []));
+    document.getElementById('chatName').textContent = person?.name || 'Vali vestlus';
+    document.getElementById('chatSubtitle').textContent = person ? 'Privaatne vestlus · ainult teie kaks' : 'Sinu sõnumid, ühes kohas';
+    document.getElementById('messageText').disabled = !person;
+    document.getElementById('sendMessageButton').disabled = !person || chatState.sending;
+    const log = document.getElementById('chatMessages');
+    const key = JSON.stringify([person?.id, person?.messages]);
+    if (key === chatState.renderedKey) return;
+    const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
+    const switched = !chatState.renderedKey;
+    chatState.renderedKey = key;
+    log.replaceChildren();
+    if (!person || !person.messages.length) log.append(chatText('p', 'chat-empty', person ? 'Siin algab teie vestlus. Kirjuta esimene sõnum!' : 'Vali vasakult inimene ja alusta vestlust.'));
+    let previousDay = '';
+    person?.messages.forEach(message => {
+        const day = chatDate(message.createdAt, false);
+        if (day !== previousDay) log.append(chatText('div', 'chat-day', day));
+        previousDay = day;
+        const bubble = chatText('div', 'chat-bubble' + (message.senderId === appState.currentUser.id ? ' outgoing' : ''), '');
+        bubble.append(chatText('div', 'chat-body', message.message), chatText('small', 'chat-time', chatDate(message.createdAt, true)));
+        log.append(bubble);
+    });
+    if (switched || atBottom) log.scrollTop = log.scrollHeight;
+}
+
+function pollChatMessages() {
+    const interval = chatState.selectedId && chatIsVisible() ? 5000 : 15000;
+    if (Date.now() - chatState.lastRefreshAt >= interval) refreshChatMessages();
+}
+
+async function refreshChatMessages() {
+    if (chatState.refreshing || chatState.sending || document.hidden || !appState.sessionToken) return;
+    const token = appState.sessionToken;
+    chatState.refreshing = true;
+    chatState.lastRefreshAt = Date.now();
+    try {
+        const results = await Promise.allSettled([
+            performAppsScriptRequest('getSentMessages', { token }),
+            performAppsScriptRequest('getInbox', { token })
+        ]);
+        if (appState.sessionToken !== token) return;
+        results.forEach((result, index) => {
+            if (result.status !== 'fulfilled' || !result.value?.success || !Array.isArray(result.value.data?.messages)) return;
+            if (index === 1) applyChatReadStates(result.value.data.readStates);
+            const field = index === 0 ? 'sentMessages' : 'inboxMessages';
+            // Keep messages confirmed locally while an older refresh was in flight.
+            const messages = new Map();
+            [...appState[field], ...result.value.data.messages].forEach(message => {
+                messages.set(message.id || JSON.stringify(message), message);
+            });
+            appState[field] = [...messages.values()];
+        });
+        renderMessages();
+        markVisibleChatRead();
+    } catch (_) { /* Manual refresh exposes errors and retry through the existing status UI. */ }
+    finally { chatState.refreshing = false; }
+}
+
+function chatDate(value, time) {
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return '';
+    return new Intl.DateTimeFormat('et-EE', time ? { hour: '2-digit', minute: '2-digit' } : { day: 'numeric', month: 'short', year: 'numeric' }).format(date);
 }
 
 function renderLeaderboard() {
@@ -714,7 +886,9 @@ async function loadUserDependentData({ fromLogin = false } = {}) {
         if (appState.sessionToken !== token) return;
         if (result?.success && Array.isArray(result.data?.[resultKey])) {
             appState[field] = result.data[resultKey];
+            if (action === 'getInbox') applyChatReadStates(result.data.readStates);
             render();
+            if (action === 'getInbox') markVisibleChatRead();
         }
     }));
 }
@@ -791,7 +965,8 @@ async function handleMessageSubmit(event) {
     event.preventDefault();
     if (!appState.currentUser) return;
 
-    const recipientId = document.getElementById('recipientSelect').value;
+    if (chatState.sending) return;
+    const recipientId = chatState.selectedId;
     const text = document.getElementById('messageText').value.trim();
 
     if (!recipientId) {
@@ -805,6 +980,8 @@ async function handleMessageSubmit(event) {
     }
 
     const sendingToken = appState.sessionToken;
+    chatState.sending = true;
+    document.getElementById('sendMessageButton').disabled = true;
     showLoading('messageFormLoading');
 
     // Preserve the draft until the server confirms delivery.
@@ -831,16 +1008,25 @@ async function handleMessageSubmit(event) {
         }
 
         hideMessage('messageFormError');
-        appState.sentMessages = [...appState.sentMessages, newMessage];
-        renderMessages();
+        appState.sentMessages = [...appState.sentMessages, result.data?.message || newMessage];
         const draft = document.getElementById('messageText');
-        if (draft.value.trim() === text) draft.value = '';
+        if (chatState.selectedId === recipientId && draft.value.trim() === text) {
+            draft.value = '';
+            chatState.drafts.delete(recipientId);
+        } else if ((chatState.drafts.get(recipientId) || '').trim() === text) {
+            chatState.drafts.delete(recipientId);
+        }
+        chatState.renderedKey = '';
+        renderMessages();
         // mark DB update time
         updateDbTimestamp(new Date().toISOString());
         hideLoading('messageFormLoading');
     } catch (error) {
         hideLoading('messageFormLoading');
-        showMessage('messageFormError', 'Sõnumi saatmine ebaõnnestus.', 'error');
+        if (appState.sessionToken === sendingToken) showMessage('messageFormError', 'Sõnumi saatmine ebaõnnestus.', 'error');
+    } finally {
+        chatState.sending = false;
+        renderMessages();
     }
 }
 
@@ -893,7 +1079,7 @@ async function handlePasswordChange(event) {
 const requestLabels = {
     login: ['account', 'Sisse logimine…'], logout: ['account', 'Välja logimine…'],
     getUsers: ['members', 'Liikmeid laetakse…'], updateUserStatus: ['members', 'Liikme olekut salvestatakse…'],
-    getSentMessages: ['messages', 'Saadetud sõnumeid laetakse…'], getInbox: ['messages', 'Saabunud sõnumeid laetakse…'],
+    getSentMessages: ['messages', 'Vestlusi laetakse…'], getInbox: ['messages', 'Vestlusi laetakse…'],
     sendMessage: ['messages', 'Sõnumit saadetakse…'], changePassword: ['settings', 'Salasõna uuendatakse…'],
     getLeaderboard: ['games', 'Edetabelit laetakse…'], saveScore: ['games', 'Tulemust salvestatakse…']
 };
@@ -929,9 +1115,8 @@ async function performAppsScriptRequest(action, payload = {}, scorePermit) {
     if (action === 'saveScore' && !security.authorize('request', payload.game, payload.score, scorePermit)) {
         return { success: false, blocked: true };
     }
-    if (!GOOGLE_SHEET_ENDPOINT) {
-        return { success: false, error: 'Google Sheets endpoint is not configured.' };
-    }
+    const endpoint = await getAppsScriptEndpoint();
+    if (action === 'saveScore' && !security.check()) return { success: false, blocked: true };
 
     const body = {
         token: appState.sessionToken || '',
@@ -943,7 +1128,7 @@ async function performAppsScriptRequest(action, payload = {}, scorePermit) {
     const untrack = action === 'saveScore' ? security.trackRequest(controller) : () => {};
     const timeout = setTimeout(() => controller.abort(), 20000);
     try {
-    const response = await fetch(GOOGLE_SHEET_ENDPOINT, {
+    const response = await fetch(endpoint, {
         signal: controller.signal,
         method: 'POST',
         redirect: 'follow',
@@ -1117,19 +1302,24 @@ function setUpEventBindings() {
         button.addEventListener('click', () => showView(button.dataset.view));
     });
 
-    // mobile message tabs
-    const tabReceived = document.getElementById('msgTabReceived');
-    const tabSent = document.getElementById('msgTabSent');
-    if (tabReceived && tabSent) {
-        tabReceived.addEventListener('click', () => {
-            setMessageTab('received');
-            window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-        });
-        tabSent.addEventListener('click', () => {
-            setMessageTab('sent');
-            window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-        });
-    }
+    setInterval(pollChatMessages, 1000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshChatMessages(); });
+    document.getElementById('chatSearch')?.addEventListener('input', renderMessages);
+    document.getElementById('chatBack')?.addEventListener('click', () => {
+        document.getElementById('chatShell').classList.remove('thread-open');
+        document.getElementById('chatSearch').focus();
+    });
+    document.getElementById('refreshChats')?.addEventListener('click', async () => {
+        const button = document.getElementById('refreshChats');
+        button.disabled = true;
+        try { await loadUserDependentData({ fromLogin: true }); } finally { button.disabled = false; }
+    });
+    document.getElementById('messageText')?.addEventListener('keydown', event => {
+        if (event.key === 'Enter' && !event.shiftKey && !event.isComposing && !window.matchMedia('(pointer: coarse)').matches) {
+            event.preventDefault();
+            document.getElementById('messageForm').requestSubmit();
+        }
+    });
 }
 
 // Games UI helpers
@@ -1179,28 +1369,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const gamesNav = document.querySelector('.nav-button[data-view="games"]');
     if (gamesNav) gamesNav.addEventListener('click', () => { showGamesList(); });
 });
-
-function setMessageTab(which) {
-    const sentBox = document.getElementById('sentBox');
-    const receivedBox = document.getElementById('receivedBox');
-    const tabReceived = document.getElementById('msgTabReceived');
-    const tabSent = document.getElementById('msgTabSent');
-    if (!sentBox || !receivedBox) return;
-
-    tabSent?.setAttribute('aria-selected', String(which === 'sent'));
-    tabReceived?.setAttribute('aria-selected', String(which !== 'sent'));
-    if (which === 'sent') {
-        sentBox.classList.add('active');
-        receivedBox.classList.remove('active');
-        if (tabSent) tabSent.classList.add('active');
-        if (tabReceived) tabReceived.classList.remove('active');
-    } else {
-        receivedBox.classList.add('active');
-        sentBox.classList.remove('active');
-        if (tabReceived) tabReceived.classList.add('active');
-        if (tabSent) tabSent.classList.remove('active');
-    }
-}
 
 async function initializeApp() {
     const storedSession = readSessionState();

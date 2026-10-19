@@ -2,6 +2,7 @@ const SPREADSHEET_ID = '1j3LdQi-44YuYJhzPus7r7C52669Br7bpke4mzu7-XIg';
 const SHEET_SCHEMAS = {
   Users: ['id', 'name', 'passwordHash', 'active', 'role', 'image', 'createdAt', 'updatedAt'],
   Messages: ['id', 'senderId', 'receiverId', 'message', 'createdAt'],
+  ChatReads: ['id', 'userId', 'peerId', 'lastReadAt'],
   Scores: ['id', 'userId', 'game', 'bestScore', 'updatedAt'],
   Sessions: ['token', 'userId', 'createdAt', 'expiresAt'],
   Settings: ['key', 'value']
@@ -259,6 +260,22 @@ function createMessageRecord(senderId, receiverId, message) {
   return record;
 }
 
+function getChatReads(userId) {
+  return getSheetRows('ChatReads').filter(row => row.userId === userId)
+    .map(row => ({ peerId: row.peerId, lastReadAt: row.lastReadAt }));
+}
+
+function markChatRead(userId, peerId, messageId) {
+  // The checkpoint must be an incoming message this user actually received.
+  const message = getSheetRows('Messages').find(row => row.id === messageId && row.senderId === peerId && row.receiverId === userId);
+  if (!message || !Number.isFinite(Date.parse(message.createdAt))) return { success: false, error: 'Message not found.' };
+  const existing = getSheetRows('ChatReads').find(row => row.userId === userId && row.peerId === peerId);
+  const lastReadAt = new Date(Math.max(Date.parse(existing?.lastReadAt) || 0, Date.parse(message.createdAt))).toISOString();
+  if (existing) updateRowById('ChatReads', existing.id, { lastReadAt });
+  else appendRow('ChatReads', { id: Utilities.getUuid(), userId, peerId, lastReadAt });
+  return { success: true, data: { peerId, lastReadAt } };
+}
+
 function resolveUserName(userId) {
   const user = getUserById(userId);
   return user ? user.name : '';
@@ -408,6 +425,7 @@ function migrateJsonDatabase() {
 
   ensureSchema('Users');
   ensureSchema('Messages');
+  ensureSchema('ChatReads');
   ensureSchema('Scores');
   ensureSchema('Sessions');
   ensureSchema('Settings');
@@ -654,12 +672,19 @@ function doPost(e) {
       return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
     }
 
+    if (action === 'markChatRead') {
+      const sessionUser = validateSession(token);
+      if (!sessionUser) return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Authentication required.' })).setMimeType(ContentService.MimeType.JSON);
+      const result = callWithLock('markChatRead', () => markChatRead(sessionUser.id, String(body.peerId || ''), String(body.messageId || '')));
+      return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+    }
+
     if (action === 'getInbox') {
       const sessionUser = validateSession(token);
       if (!sessionUser) {
         return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Authentication required.' })).setMimeType(ContentService.MimeType.JSON);
       }
-      return ContentService.createTextOutput(JSON.stringify({ success: true, data: { messages: getInboxForUser(sessionUser.id) } })).setMimeType(ContentService.MimeType.JSON);
+      return ContentService.createTextOutput(JSON.stringify({ success: true, data: { messages: getInboxForUser(sessionUser.id), readStates: getChatReads(sessionUser.id) } })).setMimeType(ContentService.MimeType.JSON);
     }
 
     if (action === 'getSentMessages') {
@@ -721,6 +746,7 @@ function ensureDefaultUsers() {
 function initDatabase() {
   ensureSchema('Users');
   ensureSchema('Messages');
+  ensureSchema('ChatReads');
   ensureSchema('Scores');
   ensureSchema('Sessions');
   ensureSchema('Settings');
