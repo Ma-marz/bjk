@@ -744,7 +744,6 @@ function renderMessages() {
     const person = conversations.find(person => person.id === chatState.selectedId);
     document.getElementById('chatProfile').replaceChildren(...(person ? [createChatAvatar(person)] : []));
     document.getElementById('chatName').textContent = person?.name || 'Vali vestlus';
-    document.getElementById('chatSubtitle').textContent = person ? 'Privaatne vestlus · ainult teie kaks' : 'Sinu sõnumid, ühes kohas';
     document.getElementById('messageText').disabled = !person;
     document.getElementById('sendMessageButton').disabled = !person || chatState.sending;
     const log = document.getElementById('chatMessages');
