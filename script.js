@@ -719,9 +719,8 @@ function renderMessages() {
     const nav = document.querySelector('[data-view="messages"]');
     nav?.classList.toggle('has-unread', hasUnread);
     nav?.setAttribute('aria-label', hasUnread ? 'Sõnumid · lugemata sõnumeid' : 'Sõnumid');
-    const query = document.getElementById('chatSearch').value.trim().toLocaleLowerCase('et');
     list.replaceChildren();
-    conversations.filter(person => person.name.toLocaleLowerCase('et').includes(query)).forEach(person => {
+    conversations.forEach(person => {
         const button = chatText('button', 'conversation' + (person.id === chatState.selectedId ? ' selected' : ''), '');
         button.type = 'button';
         button.dataset.userId = person.id;
@@ -740,7 +739,7 @@ function renderMessages() {
         button.addEventListener('click', () => openConversation(person.id));
         list.append(button);
     });
-    if (!list.childElementCount) list.append(chatText('p', 'chat-empty', query ? 'Ühtegi inimest ei leitud.' : 'Vestluskaaslasi pole veel.'));
+    if (!list.childElementCount) list.append(chatText('p', 'chat-empty', 'Vestluskaaslasi pole veel.'));
     const person = conversations.find(person => person.id === chatState.selectedId);
     document.getElementById('chatProfile').replaceChildren(...(person ? [createChatAvatar(person)] : []));
     document.getElementById('chatName').textContent = person?.name || 'Vali vestlus';
@@ -1310,10 +1309,10 @@ function setUpEventBindings() {
 
     setInterval(pollChatMessages, 1000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshChatMessages(); });
-    document.getElementById('chatSearch')?.addEventListener('input', renderMessages);
     document.getElementById('chatBack')?.addEventListener('click', () => {
         document.getElementById('chatShell').classList.remove('thread-open');
-        document.getElementById('chatSearch').focus();
+        const selected = document.querySelector('.conversation.selected');
+        selected?.focus();
     });
     document.getElementById('refreshChats')?.addEventListener('click', async () => {
         const button = document.getElementById('refreshChats');

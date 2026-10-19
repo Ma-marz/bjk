@@ -5,6 +5,7 @@ from pathlib import Path
 import random
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from generate import generate, make_pdf, plan_week, render_text, validate_config
 
@@ -63,7 +64,8 @@ class GeneratorTests(unittest.TestCase):
         self.assertEqual(make_pdf(text), make_pdf(text))
         self.assertTrue(make_pdf(text).startswith(b'%PDF-'))
 
-    def test_end_to_end_rerun_and_template_edit(self):
+    @patch('builtins.input', return_value='yes')
+    def test_end_to_end_rerun_and_template_edit(self, _confirm):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             config, template, history = (root / p for p in ['config.json', 'sample.txt', 'history.json'])
@@ -88,6 +90,45 @@ class GeneratorTests(unittest.TestCase):
                     self.assertEqual(history.read_bytes(), saved)
                     self.assertEqual(len(list(output.rglob('*.pdf'))), 3)
                     self.assertTrue(all(p.read_bytes().startswith(b'%PDF-') for p in pdfs))
+
+
+    def test_overwrite_requires_confirmation_before_any_writes(self):
+        for answer in ['', 'n', 'no', 'yes', ' Y ', EOFError()]:
+            with self.subTest(answer=answer), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                config, template, history = (root / name for name in ['config.json', 'sample.txt', 'history.json'])
+                config.write_text(json.dumps({'week': 1, 'names': ['A', 'B']}))
+                template.write_text('Updated layout')
+                output = root / 'pdfs'
+                pdf = output / 'A' / 'Nädal 1.pdf'
+                pdf.parent.mkdir(parents=True)
+                pdf.write_bytes(b'original PDF')
+                saved_history = json.dumps(self.history()).encode()
+                history.write_bytes(saved_history)
+                with patch('builtins.input', side_effect=[answer]) as confirm, patch('generate.make_pdf', return_value=b'%PDF-new') as render:
+                    result = generate(config, template, history, output)
+                confirm.assert_called_once()
+                if isinstance(answer, str) and answer.strip().lower() in ('y', 'yes'):
+                    self.assertTrue(result)
+                    self.assertEqual(pdf.read_bytes(), b'%PDF-new')
+                    self.assertTrue((output / 'B' / 'Nädal 1.pdf').exists())
+                else:
+                    self.assertFalse(result)
+                    render.assert_not_called()
+                    self.assertEqual(pdf.read_bytes(), b'original PDF')
+                    self.assertEqual(history.read_bytes(), saved_history)
+                    self.assertFalse((output / 'B').exists())
+                    self.assertFalse((output / 'available-weeks.js').exists())
+
+    def test_new_week_does_not_prompt(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config, template = root / 'config.json', root / 'sample.txt'
+            config.write_text(json.dumps({'week': 2, 'names': ['A', 'B']}))
+            template.write_text('New week')
+            with patch('builtins.input') as confirm, patch('generate.make_pdf', return_value=b'%PDF-new'):
+                self.assertTrue(generate(config, template, root / 'history.json', root / 'pdfs'))
+            confirm.assert_not_called()
 
 
 if __name__ == '__main__':

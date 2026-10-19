@@ -32,6 +32,10 @@ PDFs still generate for everyone, even with a blank template.
 Use a six-digit hex color, such as `"name_color": "#FF0000"` for red,
 `"#0000FF"` for blue, or `"#000000"` for black. Red is the default when omitted.
 Changing the color and rerunning a week preserves its assignments and date.
+If any target PDF already exists, the generator asks `Overwrite? [y/N]` once
+before replacing files. Enter `y` or `yes` to continue. Enter, any other answer,
+or unavailable terminal input cancels without changing PDFs or history.
+New weeks with no existing target PDFs do not prompt.
 Surrounding text remains
 regular black Courier, with the template's spacing preserved.
 

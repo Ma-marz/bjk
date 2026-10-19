@@ -169,6 +169,17 @@ def generate(config_path, template_path, history_path, output):
         record = plan_week(history, week, names)
         if record["names"] != names:
             print(f"Week {week} already exists: using its saved roster and assignments.")
+        existing = [Path(output) / owner.split()[0] / f"Nädal {week}.pdf"
+                    for owner in record["assignments"]]
+        existing = [path for path in existing if path.exists()]
+        if existing:
+            try:
+                answer = input(f"Week {week}: {len(existing)} PDF(s) already exist. Overwrite? [y/N] ")
+            except (EOFError, KeyboardInterrupt):
+                answer = ''
+            if answer.strip().lower() not in ('y', 'yes'):
+                print("Cancelled. Existing PDFs and history were not changed.")
+                return False
         documents = [
             (Path(output) / owner.split()[0] / f"Nädal {week}.pdf",
              make_pdf(render_text(template, record, owner, '[name_to_pray]'), recipient, name_color))
@@ -181,6 +192,7 @@ def generate(config_path, template_path, history_path, output):
         from update_index import write_index
         write_index(output)
         print(f"Generated {len(documents)} PDFs for week {week} in {Path(output).resolve()}")
+        return True
 
 
 def main():
@@ -191,7 +203,8 @@ def main():
     parser.add_argument('--output', type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
     try:
-        generate(args.config, args.template, args.history, args.output)
+        if not generate(args.config, args.template, args.history, args.output):
+            return
         if args.config.resolve() == (HERE / 'config.json').resolve() and args.output.resolve() == DEFAULT_OUTPUT.resolve():
             from sync_config import sync_config
             sync_config()
