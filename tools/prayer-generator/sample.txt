@@ -1,50 +1,48 @@
-- - - - - - - - - - - - - - - ROUND 4.6 - - - - - - - - - - - - - - - -
+- - - - - - - - - - - - - - - ROUND 4.7 - - - - - - - - - - - - - - - - - - -
 
     Lugupeetud [name],
 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-         Sõber, keda järgneval nädalal palves hoida saad, on
-                        [name_to_pray]
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            Sõber, keda järgneval nädalal palves hoida saad, on
+                           [name_to_pray]
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-    Konn on juba viis minutit klaviatuuril hüpanud ja ma pean tunnistama, 
-    et tema trükkimiskiirus on muljetavaldav. Eriti arvestades asjaolu, et 
-    tal pole sõrmi. Esialgu ilmus ekraanile lihtsalt: „krrrrrooookkkssss...” 
-    Aga siis hakkas ta kirjutama täiesti arusaadavas eesti keeles. 
-    
-    Esimene lause oli: „Palun ära sega mind. See on väga tähtis.” Ma olin 
-    loomulikult šokeeritud. Konn aga vaatas mulle otsa sellise pilguga, 
-    nagu oleksin mina see, kes siin midagi imelikku teeb.
+Ma pean tunnistama, et krooksuv kohver ei olnud päris see, mida ma oma 
+esmaspäeva õhtust ootasin. Eriti kuna see asus endiselt teise korruse akna taga, 
+konna käes, kes näis füüsikaseadustega üsna vabalt ümber käivat. Lõpuks andsin 
+alla ja avasin akna. Teine konn hüppas sisse, maandus otse mu värskelt pestud 
+aknalauale ja jättis sinna kaks porist jalajälge. Seejärel avas ta tähtsa näoga 
+kohvri. Selle sees oli umbes kakskümmend pisikest rohelist seadeldist, millest 
+üks parajasti väga valjult krooksus.
 
-    Ja siis kirjutas ta edasi: „Kõigepealt tahan ma selgitada, et meie ei 
-    ole lihtsalt kaks suvalist konna. Meil on ülesannne.” Milline ülesanne, 
-    seda ta aga ei täpsustanud. Selle asemel palus ta mul akna lahti teha. 
-    Ma muidugi keeldusin, sest mulle meenus kohe teine konn, kes endiselt 
-    väljas istus. Ühest rääkivast konnast minu toas oli täiesti piisavalt. 
-    
-    Seepeale kirjutas konn: „Sa ei saa aru. Tema on see, kes oskab 
-    õigekirja.” Ma vaatasin uuesti ekraanile ja alles siis märkasin, et 
-    konn oli kirjutanud sõna „ülesanne” kolme n-ga.
+„See ongi meie probleem,” ütles üks konnadest (* selle jutustuse huvides saame me
+edaspidi konnakeelest aru). „Need on MPKonnad. Väga head seadmed, aga kohutavalt 
+niiskustundlikud.” Ma küsisin, miks peaks konnadel üldse olema niiskustundlik 
+elektroonika. Mõlemad vaatasid mind pikalt. „Me oleme seda ka tootjalt küsinud,” 
+vastas esimene konn mornilt.
 
-    Aga enne, kui ma jõudsin midagi öelda, kostis akna tagant kolm väga 
-    nõudlikku krooksatust. Ma ei tea, mida see tähendas. Aga teine konn ei 
-    olnud enam murul. Ta oli nüüd akna küljes. Teise korruse akna küljes. 
-    Ja tal oli kaasas pisike kohver.
+Selgus, et kohver sisaldas midagi, mida nimetati KrooksTestamendiks. See olevat 
+värskelt välja antud audiopiibel, mis sisaldab nelja evangeeliumit, Apostlite 
+tegusid ning Valitud Krooksude kogumikku. Viimane koosnevat Psalmide ja 
+Õpetussõnade valitud kirjakohtadest, mis on kõik tõlgitud konnakeelde. Kuna enamik 
+konni ei oska lugeda, on kogu materjal salvestatud helina. 
 
-    Konn mu klaviatuuril vaatas kohvrit ja ohkas sügavalt. „No nii,” kirjutas ta. 
-    „Nüüd läheb keeruliseks.” Ma küsisin, mis kohvris on. Ta ei vastanud. 
-    Aga kohver hakkas krooksuma.
+„Aga miks te seda salaja veate?” küsisin mina. Konnad vahetasid pilke ja nende 
+senine lõbus olek kadus.
 
-             _   _
-            (.)_(.)         Ma hakkan vaikselt kahtlustama, 
-         _ (   _   ) _      et neid konni ei olegi ainult kaks.
-        / \/`-----'\/ \     
-      __\ ( (     ) ) /__           |---|
-      )   /\ \._./ /\   (     |---------------|     
-       )_/ /|\   /|\ \_(      |  # K O N N A  |
-                              |  K O H V E R  |
-                              |---------------|                 
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+„Sest meie maal on Jeesusesse uskumine keelatud,” vastas teine konn vaikselt. 
+„KrooksTestamendi omamise eest võib saada kuni viis aastat vangistust.” Ma ei 
+osanud selle peale midagi öelda. „Meil oleks vaja sinu abi”, ütles konn Üks. 
+Ma vaatasin vastust kaaludes kohvrit, kahte konna ja oma endiselt avatud akent.
+              _             ___________________              _
+  __   ___.--'_`.           |_________________|            .'_`--.___   __
+ ( _`.'. -   'o` )          \ \   KROOKS-   / /           ( 'o`   - .`.'_ )
+ _\.'_'      _.-'            \_#--#_____#--#_/             `-._      `_`./_
+( \`. )    //\`              / #--#     #--# \               '/\\    ( .'/ )
+ \_`-'`---'\\__,            / / TESTAMENDID \ \             ,__//`---'`-'_/
+  \`        `-\            /_/_______________\_\             /-'        '/
+   `                       |___________________|                        '  
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 Ja palve ja anumisega palvetage igal ajal Vaimus ning selleks valvake
 kogu püsivusega ja eestpalvetega kõigi pühade eest (Ef 6:18)

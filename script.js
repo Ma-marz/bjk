@@ -109,6 +109,7 @@ function clearSession() {
     appState.users = [];
     chatState.selectedId = '';
     chatState.drafts.clear();
+    chatState.unreadBoundaryId = '';
     chatState.readTimes.clear();
     chatState.pendingReads.clear();
     chatState.readsLoaded = false;
@@ -614,7 +615,7 @@ function formatDate(dateString) {
     }).format(date);
 }
 
-const chatState = { selectedId: '', drafts: new Map(), sending: false, renderedKey: '', refreshing: false, lastRefreshAt: 0, readTimes: new Map(), pendingReads: new Map(), readsLoaded: false };
+const chatState = { selectedId: '', drafts: new Map(), sending: false, renderedKey: '', refreshing: false, lastRefreshAt: 0, unreadBoundaryId: '', readTimes: new Map(), pendingReads: new Map(), readsLoaded: false };
 
 function chatText(tag, className, text) {
     const element = document.createElement(tag);
@@ -702,6 +703,7 @@ function getConversations() {
 function openConversation(id) {
     if (chatState.selectedId) chatState.drafts.set(chatState.selectedId, document.getElementById('messageText').value);
     chatState.selectedId = id;
+    chatState.unreadBoundaryId = '';
     chatState.renderedKey = '';
     hideMessage('messageFormError');
     document.getElementById('messageText').value = chatState.drafts.get(id) || '';
@@ -746,7 +748,13 @@ function renderMessages() {
     document.getElementById('messageText').disabled = !person;
     document.getElementById('sendMessageButton').disabled = !person || chatState.sending;
     const log = document.getElementById('chatMessages');
-    const key = JSON.stringify([person?.id, person?.messages]);
+    if (person && chatState.readsLoaded && !chatState.unreadBoundaryId) {
+        const readAt = Math.max(chatState.readTimes.get(person.id) || 0, chatState.pendingReads.get(person.id) || 0);
+        const firstUnread = person.messages.find(message => message.receiverId === appState.currentUser.id &&
+            (Date.parse(message.createdAt) || 0) > readAt);
+        chatState.unreadBoundaryId = firstUnread?.id || '';
+    }
+    const key = JSON.stringify([person?.id, person?.messages, chatState.unreadBoundaryId]);
     if (key === chatState.renderedKey) return;
     const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
     const switched = !chatState.renderedKey;
@@ -754,15 +762,24 @@ function renderMessages() {
     log.replaceChildren();
     if (!person || !person.messages.length) log.append(chatText('p', 'chat-empty', person ? 'Siin algab teie vestlus. Kirjuta esimene sõnum!' : 'Vali vasakult inimene ja alusta vestlust.'));
     let previousDay = '';
+    let unreadDivider;
     person?.messages.forEach(message => {
         const day = chatDate(message.createdAt, false);
         if (day !== previousDay) log.append(chatText('div', 'chat-day', day));
         previousDay = day;
+        if (message.id && message.id === chatState.unreadBoundaryId) {
+            unreadDivider = chatText('div', 'chat-unread-divider', 'Lugemata sõnumid');
+            unreadDivider.setAttribute('role', 'separator');
+            unreadDivider.setAttribute('aria-label', 'Lugemata sõnumid');
+            log.append(unreadDivider);
+        }
         const bubble = chatText('div', 'chat-bubble' + (message.senderId === appState.currentUser.id ? ' outgoing' : ''), '');
         bubble.append(chatText('div', 'chat-body', message.message), chatText('small', 'chat-time', chatDate(message.createdAt, true)));
         log.append(bubble);
     });
-    if (switched || atBottom) log.scrollTop = log.scrollHeight;
+    if (switched && unreadDivider) {
+        log.scrollTop += unreadDivider.getBoundingClientRect().top - log.getBoundingClientRect().top - 12;
+    } else if (switched || atBottom) log.scrollTop = log.scrollHeight;
 }
 
 function pollChatMessages() {

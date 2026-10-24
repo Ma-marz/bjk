@@ -223,3 +223,6 @@ body:has(#appScreen.hidden) .site-footer { padding-bottom: 24px; }
 .conversation.unread { background: #e8d3b2; }
 .conversation.unread .conversation-preview { color: var(--ink); font-weight: 700; }
 .chat-unread-badge { min-width: 20px; height: 20px; padding: 0 5px; border-radius: 12px; background: #b52f2b; color: white; font-size: 11px; line-height: 20px; text-align: center; flex-shrink: 0; }
+
+.chat-unread-divider { display: flex; align-items: center; gap: 12px; flex-shrink: 0; margin: 14px 0; color: #a22e29; font-size: 11px; font-weight: 600; }
+.chat-unread-divider::before, .chat-unread-divider::after { content: ''; flex: 1; border-top: 1px solid #b52f2b70; }
