@@ -64,7 +64,7 @@ Journal entries can be edited with `editJournalEntry`. The backend verifies both
 sender and receiver belong to the session user and updates only message text;
 the original creation date and chronological position remain unchanged.
 
-Long-press a chat message (or right-click on desktop) and choose **Ava uus märge**
+Double-click or double-tap a chat message and choose **Ava uus märge**
 to append it to the current journal draft. A linked-message icon opens the draft
 or saved entry. `Messages.sourceMessageIds` stores the links; the backend checks
 message ownership and enforces one journal link per source message per user.

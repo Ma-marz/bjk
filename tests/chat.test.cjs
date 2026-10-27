@@ -157,9 +157,24 @@ const assert = require('node:assert/strict');
     await page.click('[data-view="messages"]');
     await page.evaluate(() => openConversation('a'));
     const firstBubble = page.locator('.chat-bubble').filter({ hasText: 'Old outgoing' });
-    await firstBubble.dispatchEvent('pointerdown', { button: 0, clientX: 10, clientY: 10 });
+    await firstBubble.dispatchEvent('pointerdown', { pointerType: 'touch', button: 0, clientX: 10, clientY: 10 });
+    await page.waitForTimeout(600);
+    await firstBubble.dispatchEvent('pointerup', { pointerType: 'touch', button: 0, clientX: 10, clientY: 10 });
+    assert.equal(await page.locator('#messageActions').evaluate(dialog => dialog.open), false, 'long hold does not open journal actions');
+    assert.equal(await firstBubble.evaluate(bubble => {
+      const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+      bubble.dispatchEvent(event);
+      return event.defaultPrevented;
+    }), false, 'native copy menu is not blocked');
+    assert.equal(await firstBubble.evaluate(bubble => {
+      const range = document.createRange();
+      range.selectNodeContents(bubble.querySelector('.chat-body'));
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+      return window.getSelection().toString();
+    }), 'Old outgoing', 'message text remains selectable');
+    await firstBubble.dblclick();
     await page.waitForSelector('#messageActions[open]');
-    await firstBubble.dispatchEvent('pointerup', { button: 0 });
     await page.click('#copyMessageToJournal');
     assert.equal(await page.locator('#view-journal').isVisible(), true);
     assert.match(await page.inputValue('#journalText'), /Existing unsaved thought[\s\S]*Old outgoing/);
@@ -171,7 +186,11 @@ const assert = require('node:assert/strict');
     assert.equal((await page.inputValue('#journalText')).split('Old outgoing').length - 1, 1, 'copy cannot duplicate a message');
     await page.click('[data-view="messages"]');
     const incoming = page.locator('.chat-bubble').filter({ hasText: '<img src=x onerror=alert(1)>' });
-    await incoming.click({ button: 'right' });
+    for (let tap = 0; tap < 2; tap++) {
+      await incoming.dispatchEvent('pointerdown', { pointerType: 'touch', button: 0, clientX: 20, clientY: 20 });
+      await incoming.dispatchEvent('pointerup', { pointerType: 'touch', button: 0, clientX: 20, clientY: 20 });
+    }
+    await page.waitForSelector('#messageActions[open]');
     await page.click('#copyMessageToJournal');
     const copiedDraft = await page.inputValue('#journalText');
     assert.match(copiedDraft, /Old outgoing[\s\S]*<img src=x onerror=alert\(1\)>/);

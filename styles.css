@@ -247,7 +247,7 @@ body:has(#appScreen.hidden) .site-footer { padding-bottom: 24px; }
 .message-journal-link { border: 0; border-radius: 5px; background: #ffffff28; color: inherit; min-width: 32px; min-height: 32px; font-size: 20px; margin-top: 5px; }
 .journal-draft-notice { color: var(--muted); font: 12px/1.6 system-ui, sans-serif; padding: 20px 0; border-top: 1px dashed var(--border); margin-top: 20px; }
 
-.chat-bubble { -webkit-touch-callout: none; }
+
 
 .journal-pagination { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid var(--border); }
 #journalPageNumber { flex: 1; text-align: center; font: 12px system-ui, sans-serif; color: var(--muted); }
@@ -261,3 +261,13 @@ body:has(#appScreen.hidden) .site-footer { padding-bottom: 24px; }
 .message-journal-link .icon { width: 21px; height: 21px; }
 
 .journal-delete { color: var(--danger); border-color: var(--danger); margin-right: auto; }
+
+.chat-bubble { touch-action: manipulation; }
+
+.journal-help { max-width: 850px; margin: 18px auto 0; color: var(--muted); }
+.journal-help summary { display: grid; place-items: center; width: 44px; height: 44px; margin-left: auto; cursor: pointer; list-style: none; border-radius: 50%; }
+.journal-help summary::-webkit-details-marker { display: none; }
+.journal-help summary .icon { width: 23px; height: 23px; }
+.journal-help summary:hover { color: var(--ink); }
+.journal-help-text { font-size: 14px; line-height: 1.7; }
+.journal-help-text p { margin: 0 0 14px; }

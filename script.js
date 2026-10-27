@@ -856,25 +856,40 @@ function copyMessageToJournal(message) {
 
 function bindMessageJournalActions(bubble, message) {
     if (!message.id) return;
-    let timer, origin;
-    const cancel = () => { clearTimeout(timer); timer = null; };
     const open = () => {
-        cancel();
         if (!bubble.isConnected || journalLinkFor(message.id)) return;
         journalMenuMessage = message;
         const dialog = document.getElementById('messageActions');
         if (!dialog.open) dialog.showModal();
     };
     bubble.tabIndex = 0;
-    bubble.addEventListener('contextmenu', event => { event.preventDefault(); open(); });
-    bubble.addEventListener('pointerdown', event => {
-        if (event.button !== 0 || event.target.closest('button')) return;
-        origin = { x: event.clientX, y: event.clientY };
-        timer = setTimeout(open, 550);
+    bubble.addEventListener('dblclick', event => {
+        if (event.button === 0 && !event.target.closest('button')) open();
     });
-    bubble.addEventListener('pointermove', event => { if (origin && Math.hypot(event.clientX - origin.x, event.clientY - origin.y) > 10) cancel(); });
-    ['pointerup', 'pointercancel', 'pointerleave'].forEach(type => bubble.addEventListener(type, cancel));
-    bubble.addEventListener('keydown', event => { if ((event.shiftKey && event.key === 'F10') || event.key === 'ContextMenu') { event.preventDefault(); open(); } });
+    // Detect quick double-taps without intercepting native long-press selection.
+    let touchStart, previousTap;
+    bubble.addEventListener('pointerdown', event => {
+        touchStart = null;
+        if (event.pointerType !== 'touch' || event.target.closest('button')) return;
+        touchStart = { x: event.clientX, y: event.clientY, time: event.timeStamp };
+    });
+    bubble.addEventListener('pointermove', event => {
+        if (touchStart && Math.hypot(event.clientX - touchStart.x, event.clientY - touchStart.y) > 12) { touchStart = null; previousTap = null; }
+    });
+    bubble.addEventListener('pointercancel', () => { touchStart = null; previousTap = null; });
+    bubble.addEventListener('pointerup', event => {
+        if (event.pointerType !== 'touch') return;
+        const start = touchStart;
+        touchStart = null;
+        if (!start || event.timeStamp - start.time > 250) { previousTap = null; return; }
+        if (previousTap && event.timeStamp - previousTap.time < 350 && Math.hypot(event.clientX - previousTap.x, event.clientY - previousTap.y) < 24) {
+            previousTap = null;
+            open();
+        } else previousTap = { x: event.clientX, y: event.clientY, time: event.timeStamp };
+    });
+    bubble.addEventListener('keydown', event => {
+        if (event.target === bubble && event.key === 'Enter') { event.preventDefault(); open(); }
+    });
     if (journalLinkFor(message.id)) {
         const link = chatText('button', 'message-journal-link', '');
         const book = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
