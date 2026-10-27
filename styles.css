@@ -28,7 +28,7 @@ button:disabled { cursor: wait; opacity: .55; }
 .topbar-actions { display: flex; align-items: center; gap: 10px; }
 .session-badge { font-size: 13px; max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
 .app-main { padding: 24px 18px 32px; }
-.main-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 20; display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); padding: 8px 8px max(8px, env(safe-area-inset-bottom)); background: #eee0c6f5; border-top: 1px solid #a78961; box-shadow: 0 -4px 20px #51371d12; backdrop-filter: blur(12px); }
+.main-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 20; display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); padding: 8px 8px max(8px, env(safe-area-inset-bottom)); background: #eee0c6f5; border-top: 1px solid #a78961; box-shadow: 0 -4px 20px #51371d12; backdrop-filter: blur(12px); }
 .nav-button { min-height: 58px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: 1px solid transparent; border-radius: 5px; background: transparent; color: #705b40; font-size: 11px; }
 .nav-button .icon { width: 24px; height: 24px; }
 .nav-button.active { background: var(--primary); color: #fff0d4; border-color: var(--primary-dark); box-shadow: inset 0 0 0 3px #e7c99018; }
@@ -226,3 +226,25 @@ body:has(#appScreen.hidden) .site-footer { padding-bottom: 24px; }
 
 .chat-unread-divider { display: flex; align-items: center; gap: 12px; flex-shrink: 0; margin: 14px 0; color: #a22e29; font-size: 11px; font-weight: 600; }
 .chat-unread-divider::before, .chat-unread-divider::after { content: ''; flex: 1; border-top: 1px solid #b52f2b70; }
+
+.notebook { max-width: 850px; margin: auto; border: 1px solid var(--border); border-radius: 6px; background: linear-gradient(90deg, transparent 37px, #b5524740 37px 39px, transparent 39px), var(--paper-light); box-shadow: 4px 4px 0 #e7d5b2, 5px 5px 0 var(--border); padding: 24px 24px 24px 56px; }
+.journal-form { display: grid; gap: 10px; }
+.journal-form textarea { min-height: 160px; line-height: 28px; background: repeating-linear-gradient(transparent 0 27px, #bba17a55 27px 28px); background-attachment: scroll; background-position: 0 var(--journal-line-offset, 0px); overscroll-behavior: none; border: 0; padding: 0 4px; font-family: Georgia, serif; }
+.journal-form button { justify-self: end; }
+.journal-entry { padding: 24px 0; border-top: 1px dashed var(--border); margin-top: 20px; }
+.journal-date { color: var(--muted); font: 11px system-ui, sans-serif; }
+.journal-body { margin-top: 14px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.8; }
+.journal-empty { color: var(--muted); padding-top: 24px; }
+@media(max-width:699px) { .notebook { padding-right: 16px; padding-left: 48px; } .nav-button { font-size: 10px; } }
+
+.journal-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: flex-end; }
+.journal-actions .primary-button { margin: 0; }
+.journal-edit { margin-top: 16px; font-size: 11px; }
+
+.message-actions { border: 1px solid var(--border); border-radius: 14px; padding: 20px; background: var(--paper-light); color: var(--ink); }
+.message-actions::backdrop { background: #39271960; }
+.message-actions button { display: block; width: 100%; margin: 8px 0; }
+.message-journal-link { border: 0; border-radius: 5px; background: #ffffff28; color: inherit; min-width: 32px; min-height: 32px; font-size: 20px; margin-top: 5px; }
+.journal-draft-notice { color: var(--muted); font: 12px/1.6 system-ui, sans-serif; padding: 20px 0; border-top: 1px dashed var(--border); margin-top: 20px; }
+
+.chat-bubble { -webkit-touch-callout: none; }

@@ -58,6 +58,7 @@
                 <nav id="mainNav" class="main-nav" aria-label="Põhimenüü">
                     <button type="button" class="nav-button active" data-view="prayers" aria-label="Eestpalvesedelid"><svg class="icon" aria-hidden="true"><use href="#icon-book"/></svg><span>Palvesedelid</span></button>
                     <button type="button" class="nav-button" data-view="messages" aria-label="Sõnumid"><svg class="icon" aria-hidden="true"><use href="#icon-letter"/></svg><span>Sõnumid</span></button>
+                    <button type="button" class="nav-button" data-view="journal" aria-label="Märkmik"><svg class="icon" aria-hidden="true"><use href="#icon-book"/></svg><span>Märkmik</span></button>
                     <button type="button" class="nav-button" data-view="games" aria-label="Mängud"><svg class="icon" aria-hidden="true"><use href="#icon-compass"/></svg><span>Mängud</span></button>
                     <button type="button" class="nav-button" data-view="settings" aria-label="Seaded"><svg class="icon" aria-hidden="true"><use href="#icon-key"/></svg><span>Seaded</span></button>
                 </nav>
@@ -103,6 +104,19 @@
                                 <div id="messageFormLoading" class="hidden" aria-hidden="true"></div>
                             </form>
                         </section>
+                    </div>
+                </div>
+
+                <div id="view-journal" class="view-panel hidden">
+                    <div class="section-heading"><div><span class="eyebrow">Mõtted ja meenutused</span><h2>Märkmik</h2><p>Sinu isiklikud märkmed.</p></div><button id="refreshJournal" type="button" class="ghost-button">Värskenda</button></div>
+                    <div class="notebook">
+                        <form id="journalForm" class="journal-form">
+                            <label id="journalEditorLabel" for="journalText">Uus märge</label>
+                            <textarea id="journalText" rows="5" maxlength="10000" placeholder="Mis sul mõttes on?" required></textarea>
+                            <div id="journalError" class="message error hidden" role="alert"></div>
+                            <div class="journal-actions"><button id="cancelJournalEdit" type="button" class="ghost-button hidden">Loobu muutmisest</button><button id="saveJournal" type="submit" class="primary-button">Salvesta märge</button></div>
+                        </form>
+                        <div id="journalEntries" aria-label="Sinu märkmed"></div>
                     </div>
                 </div>
 
@@ -229,9 +243,13 @@
         <footer class="site-footer"><span>BjK</span><span>nojeh, kes see nimetab oma sõpruspundi Balta järgi?</span></footer>
     </div>
 
+    <dialog id="messageActions" class="message-actions" aria-label="Sõnumi valikud">
+        <button id="copyMessageToJournal" type="button" class="primary-button">Ava uus märge</button>
+        <button id="closeMessageActions" type="button" class="ghost-button">Loobu</button>
+    </dialog>
     <script id="fileEndpointConfig">
         // Generated from tools/prayer-generator/config.json by sync_config.py.
-        window.BJK_FILE_ENDPOINT = "https://script.google.com/macros/s/AKfycbx5woOLGqUei855vN3DhnKDhBo3MAezVD5GlJvKqmdDudh24x9OldSzfTTh19VEutim/exec";
+        window.BJK_FILE_ENDPOINT = "https://script.google.com/macros/s/AKfycbyaPVlkbgc8n3S611txMyC05oeKNF4V5-quXgOeD871_WgatbpSzlWJ2buv5LrwPXw/exec";
     </script>
     <script src="prayer/available-weeks.js"></script>
     <script src="games/security.js"></script>

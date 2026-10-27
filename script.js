@@ -100,6 +100,11 @@ function setSessionState(token, user = null) {
 }
 
 function clearSession() {
+    persistJournalDraft();
+    journalDraftOwner = '';
+    journalDraftSources = [];
+    journalMenuMessage = null;
+    document.getElementById('messageActions')?.close();
     window.BJKFlappy?.close();
     appState.sessionToken = '';
     appState.currentUser = null;
@@ -119,6 +124,13 @@ function clearSession() {
     document.getElementById('chatShell').classList.remove('thread-open');
     appState.sentMessages = [];
     appState.inboxMessages = [];
+    journalEditingId = '';
+    document.getElementById('journalEditorLabel').textContent = 'Uus märge';
+    document.getElementById('saveJournal').textContent = 'Salvesta märge';
+    document.getElementById('cancelJournalEdit').classList.add('hidden');
+    document.getElementById('journalText').value = '';
+    document.getElementById('journalEntries').replaceChildren();
+    hideMessage('journalError');
     appState.leaderboard = [];
     prayerRenderKey = '';
     prayerRenderVersion++;
@@ -324,6 +336,7 @@ function showView(viewName) {
         panel.classList.toggle('hidden', !shouldShow);
         panel.classList.toggle('active', shouldShow);
     });
+    if (changed && viewName === 'journal') { renderJournal(); refreshChatMessages(); }
     if (changed && viewName === 'messages') {
         refreshChatMessages();
         const log = document.getElementById('chatMessages');
@@ -713,7 +726,210 @@ function openConversation(id) {
     refreshChatMessages();
 }
 
+let journalSaving = false;
+let journalEditingId = '';
+let journalDraftSources = [];
+let journalDraftOwner = '';
+let journalMenuMessage = null;
+
+function journalSourceIds(value) {
+    if (Array.isArray(value)) return value;
+    try { const parsed = JSON.parse(value || '[]'); return Array.isArray(parsed) ? parsed : []; } catch (_) { return []; }
+}
+
+function restoreJournalDraft() {
+    const me = appState.currentUser?.id;
+    if (!me || journalDraftOwner === me) return;
+    journalDraftOwner = me;
+    journalEditingId = '';
+    journalDraftSources = [];
+    let draft;
+    try { draft = JSON.parse(localStorage.getItem('bjkJournalDraft:' + me) || 'null'); } catch (_) {}
+    document.getElementById('journalText').value = typeof draft?.text === 'string' ? draft.text : '';
+    journalEditingId = typeof draft?.entryId === 'string' ? draft.entryId : '';
+    journalDraftSources = journalSourceIds(draft?.sources).filter(id => typeof id === 'string');
+}
+
+function hasJournalDraft() {
+    return Boolean(journalEditingId || journalDraftSources.length || document.getElementById('journalText').value.trim());
+}
+
+function persistJournalDraft() {
+    const me = appState.currentUser?.id;
+    if (!me || journalDraftOwner !== me) return;
+    try {
+        const key = 'bjkJournalDraft:' + me;
+        if (hasJournalDraft()) localStorage.setItem(key, JSON.stringify({ text: document.getElementById('journalText').value, entryId: journalEditingId, sources: journalDraftSources }));
+        else localStorage.removeItem(key);
+    } catch (_) { showMessage('journalError', 'Mustandi salvestamine sellesse brauserisse ebaõnnestus. Salvesta märge enne lehe sulgemist.', 'error'); }
+}
+
+function journalLinkFor(messageId) {
+    if (journalDraftSources.includes(messageId)) return { draft: true, id: journalEditingId };
+    const me = appState.currentUser?.id;
+    return appState.inboxMessages.find(entry => entry.senderId === me && entry.receiverId === me && journalSourceIds(entry.sourceMessageIds).includes(messageId));
+}
+
+function finishJournalEdit() {
+    if (journalSaving) return;
+    journalEditingId = '';
+    journalDraftSources = [];
+    document.getElementById('journalText').value = '';
+    persistJournalDraft();
+    hideMessage('journalError');
+    renderMessages();
+}
+
+function editJournalEntry(entry) {
+    if (journalSaving) return;
+    restoreJournalDraft();
+    if (hasJournalDraft()) {
+        if (journalEditingId !== entry.id) showMessage('journalError', 'Salvesta või lõpeta praegune mustand enne teiste märkmete avamist.', 'error');
+        return;
+    }
+    journalEditingId = entry.id;
+    journalDraftSources = journalSourceIds(entry.sourceMessageIds).slice();
+    document.getElementById('journalText').value = entry.message;
+    persistJournalDraft();
+    hideMessage('journalError');
+    renderJournal();
+    document.getElementById('journalText').focus();
+}
+
+function openLinkedJournal(messageId) {
+    restoreJournalDraft();
+    const link = journalLinkFor(messageId);
+    showView('journal');
+    if (link && !link.draft) editJournalEntry(link);
+    document.getElementById('journalText').focus();
+}
+
+function copyMessageToJournal(message) {
+    if (journalSaving) return;
+    restoreJournalDraft();
+    if (journalLinkFor(message.id)) { openLinkedJournal(message.id); return; }
+    const input = document.getElementById('journalText');
+    const sender = message.senderId === appState.currentUser.id ? appState.currentUser.name : message.senderName || appState.users.find(user => user.id === message.senderId)?.name || 'Kasutaja';
+    const quote = '„' + message.message + '”\n— ' + sender + ' · ' + chatDate(message.createdAt, false) + '\n\n';
+    if ((input.value + quote).length + 2 > input.maxLength) {
+        showView('journal');
+        showMessage('journalError', 'Mustand on selle sõnumi lisamiseks liiga pikk. Salvesta see enne uue märkme alustamist.', 'error');
+        return;
+    }
+    input.value = (input.value ? input.value.trimEnd() + '\n\n' : '') + quote;
+    journalDraftSources.push(message.id);
+    persistJournalDraft();
+    showView('journal');
+    renderMessages();
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+}
+
+function bindMessageJournalActions(bubble, message) {
+    if (!message.id) return;
+    let timer, origin;
+    const cancel = () => { clearTimeout(timer); timer = null; };
+    const open = () => {
+        cancel();
+        if (!bubble.isConnected || journalLinkFor(message.id)) return;
+        journalMenuMessage = message;
+        const dialog = document.getElementById('messageActions');
+        if (!dialog.open) dialog.showModal();
+    };
+    bubble.tabIndex = 0;
+    bubble.addEventListener('contextmenu', event => { event.preventDefault(); open(); });
+    bubble.addEventListener('pointerdown', event => {
+        if (event.button !== 0 || event.target.closest('button')) return;
+        origin = { x: event.clientX, y: event.clientY };
+        timer = setTimeout(open, 550);
+    });
+    bubble.addEventListener('pointermove', event => { if (origin && Math.hypot(event.clientX - origin.x, event.clientY - origin.y) > 10) cancel(); });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(type => bubble.addEventListener(type, cancel));
+    bubble.addEventListener('keydown', event => { if ((event.shiftKey && event.key === 'F10') || event.key === 'ContextMenu') { event.preventDefault(); open(); } });
+    if (journalLinkFor(message.id)) {
+        const link = chatText('button', 'message-journal-link', '▤');
+        link.type = 'button';
+        link.title = 'Ava märge';
+        link.setAttribute('aria-label', 'Ava märge');
+        link.addEventListener('click', () => openLinkedJournal(message.id));
+        bubble.append(link);
+    }
+}
+
+function syncJournalLines() {
+    const input = document.getElementById('journalText');
+    if (input) input.style.setProperty('--journal-line-offset', `${-(input.scrollTop % 28)}px`);
+}
+
+function renderJournal() {
+    const list = document.getElementById('journalEntries');
+    if (!list) return;
+    restoreJournalDraft();
+    syncJournalLines();
+    const me = appState.currentUser?.id;
+    const entries = appState.inboxMessages.filter(message => me && message.senderId === me && message.receiverId === me)
+        .slice().sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0));
+    const original = entries.find(entry => entry.id === journalEditingId);
+    document.getElementById('journalEditorLabel').textContent = journalEditingId ? 'Muuda märget' + (original ? ' · ' + chatDate(original.createdAt, false) : '') : 'Uus märge';
+    document.getElementById('saveJournal').textContent = journalEditingId ? 'Salvesta muudatused' : 'Salvesta märge';
+    const cancel = document.getElementById('cancelJournalEdit');
+    cancel.textContent = journalEditingId ? 'Loobu muutmisest' : 'Loobu mustandist';
+    cancel.classList.toggle('hidden', !hasJournalDraft());
+    list.replaceChildren();
+    if (hasJournalDraft()) {
+        list.append(chatText('p', 'journal-draft-notice', 'Mustand · Salvesta märge või loobu mustandist, et avada varasemad märkmed.'));
+        return;
+    }
+    if (!entries.length) list.append(chatText('p', 'journal-empty', 'Sinu märkmik on veel tühi. Pane esimene mõte kirja.'));
+    entries.forEach(entry => {
+        const page = chatText('article', 'journal-entry', '');
+        page.dataset.entryId = entry.id;
+        page.append(chatText('time', 'journal-date', chatDate(entry.createdAt, false) + ' · ' + chatDate(entry.createdAt, true)), chatText('div', 'journal-body', entry.message));
+        const edit = chatText('button', 'ghost-button journal-edit', 'Muuda');
+        edit.type = 'button'; edit.disabled = journalSaving;
+        edit.addEventListener('click', () => editJournalEntry(entry));
+        page.append(edit); list.append(page);
+    });
+}
+
+async function saveJournalEntry(event) {
+    event.preventDefault();
+    if (!appState.currentUser || journalSaving) return;
+    const input = document.getElementById('journalText');
+    const text = input.value.trim();
+    if (!text) return;
+    const token = appState.sessionToken;
+    const editingId = journalEditingId;
+    persistJournalDraft();
+    journalSaving = true;
+    input.disabled = true;
+    document.getElementById('cancelJournalEdit').disabled = true;
+    document.getElementById('saveJournal').disabled = true;
+    hideMessage('journalError');
+    try {
+        const result = await callAppsScript(editingId ? 'editJournalEntry' : 'addJournalEntry', { token, message: text, sourceMessageIds: journalDraftSources, ...(editingId ? { id: editingId } : {}) });
+        if (appState.sessionToken !== token) return;
+        if (!result?.success || !result.data?.message) throw new Error(result?.error || 'Märkme salvestamine ebaõnnestus.');
+        const entry = result.data.message;
+        const index = appState.inboxMessages.findIndex(message => message.id === entry.id);
+        if (index >= 0) appState.inboxMessages[index] = entry;
+        else appState.inboxMessages.push(entry);
+        journalEditingId = ''; journalDraftSources = []; input.value = '';
+        persistJournalDraft();
+        renderMessages();
+    } catch (error) {
+        if (appState.sessionToken === token) showMessage('journalError', error.message || 'Märkme salvestamine ebaõnnestus.', 'error');
+    } finally {
+        journalSaving = false;
+        input.disabled = false;
+        document.getElementById('cancelJournalEdit').disabled = false;
+        document.getElementById('saveJournal').disabled = false;
+        renderJournal();
+    }
+}
+
 function renderMessages() {
+    renderJournal();
     const list = document.getElementById('conversationList');
     if (!list) return;
     const conversations = getConversations();
@@ -754,7 +970,7 @@ function renderMessages() {
             (Date.parse(message.createdAt) || 0) > readAt);
         chatState.unreadBoundaryId = firstUnread?.id || '';
     }
-    const key = JSON.stringify([person?.id, person?.messages, chatState.unreadBoundaryId]);
+    const key = JSON.stringify([person?.id, person?.messages, chatState.unreadBoundaryId, appState.inboxMessages.filter(entry => entry.senderId === entry.receiverId), journalDraftSources]);
     if (key === chatState.renderedKey) return;
     const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
     const switched = !chatState.renderedKey;
@@ -775,6 +991,7 @@ function renderMessages() {
         }
         const bubble = chatText('div', 'chat-bubble' + (message.senderId === appState.currentUser.id ? ' outgoing' : ''), '');
         bubble.append(chatText('div', 'chat-body', message.message), chatText('small', 'chat-time', chatDate(message.createdAt, true)));
+        bindMessageJournalActions(bubble, message);
         log.append(bubble);
     });
     if (switched && unreadDivider) {
@@ -1092,6 +1309,8 @@ async function handlePasswordChange(event) {
 }
 
 const requestLabels = {
+    addJournalEntry: ['journal', 'Märget salvestatakse…'],
+    editJournalEntry: ['journal', 'Muudatusi salvestatakse…'],
     login: ['account', 'Sisse logimine…'], logout: ['account', 'Välja logimine…'],
     getUsers: ['members', 'Liikmeid laetakse…'], updateUserStatus: ['members', 'Liikme olekut salvestatakse…'],
     getSentMessages: ['messages', 'Vestlusi laetakse…'], getInbox: ['messages', 'Vestlusi laetakse…'],
@@ -1324,6 +1543,21 @@ function setUpEventBindings() {
         button.addEventListener('click', () => showView(button.dataset.view));
     });
 
+    document.getElementById('journalText')?.addEventListener('scroll', syncJournalLines, { passive: true });
+    document.getElementById('journalText')?.addEventListener('input', () => { syncJournalLines(); persistJournalDraft(); renderJournal(); });
+    document.getElementById('copyMessageToJournal')?.addEventListener('click', () => {
+        const message = journalMenuMessage;
+        document.getElementById('messageActions').close();
+        if (message) copyMessageToJournal(message);
+    });
+    document.getElementById('closeMessageActions')?.addEventListener('click', () => document.getElementById('messageActions').close());
+    document.getElementById('cancelJournalEdit')?.addEventListener('click', finishJournalEdit);
+    document.getElementById('journalForm')?.addEventListener('submit', saveJournalEntry);
+    document.getElementById('refreshJournal')?.addEventListener('click', async () => {
+        const button = document.getElementById('refreshJournal');
+        button.disabled = true;
+        try { await refreshChatMessages(); } finally { button.disabled = false; }
+    });
     setInterval(pollChatMessages, 1000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshChatMessages(); });
     document.getElementById('chatBack')?.addEventListener('click', () => {
@@ -1434,7 +1668,7 @@ window.addEventListener('bjk-store-current-user', () => {
     }
 });
 
-window.addEventListener('beforeunload', persistState);
+window.addEventListener('beforeunload', () => { persistJournalDraft(); persistState(); });
 
 function updateOpenPdfButton(fileURL) {
     const buttonDiv = document.getElementById('openPDFButtonDiv');

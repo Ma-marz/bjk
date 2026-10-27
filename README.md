@@ -53,3 +53,24 @@ python3 tools/prayer-generator/sync_config.py
 
 Normal prayer generation also syncs this fallback automatically. Over HTTP,
 the portal reads the JSON configuration directly.
+
+Märkmik stores notebook entries in `Messages` with both sender and receiver set
+to the authenticated user's ID. The `addJournalEntry` action never accepts an
+owner from the client. Notes are loaded through the user's authenticated inbox,
+excluded from chat conversations and notifications, and omitted from public
+GET exports. Deploy the updated Apps Script backend to enable notebook saves.
+
+Journal entries can be edited with `editJournalEntry`. The backend verifies both
+sender and receiver belong to the session user and updates only message text;
+the original creation date and chronological position remain unchanged.
+
+Long-press a chat message (or right-click on desktop) and choose **Ava uus märge**
+to append it to the current journal draft. A linked-message icon opens the draft
+or saved entry. `Messages.sourceMessageIds` stores the links; the backend checks
+message ownership and enforces one journal link per source message per user.
+The extra column is added automatically after deploying the updated backend.
+
+Unfinished journal drafts, including edits and copied-message links, are saved
+per account in this browser's local storage and restored after reopening the
+page. They are not yet saved to the database or synced to other devices.
+Previous entries remain hidden until the user saves or discards the draft.

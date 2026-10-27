@@ -1,7 +1,7 @@
 const SPREADSHEET_ID = '1j3LdQi-44YuYJhzPus7r7C52669Br7bpke4mzu7-XIg';
 const SHEET_SCHEMAS = {
   Users: ['id', 'name', 'passwordHash', 'active', 'role', 'image', 'createdAt', 'updatedAt'],
-  Messages: ['id', 'senderId', 'receiverId', 'message', 'createdAt'],
+  Messages: ['id', 'senderId', 'receiverId', 'message', 'createdAt', 'sourceMessageIds'],
   ChatReads: ['id', 'userId', 'peerId', 'lastReadAt'],
   Scores: ['id', 'userId', 'game', 'bestScore', 'updatedAt'],
   Sessions: ['token', 'userId', 'createdAt', 'expiresAt'],
@@ -249,7 +249,7 @@ function updateUserRecord(userId, updates) {
   return merged;
 }
 
-function createMessageRecord(senderId, receiverId, message) {
+function createMessageRecord(senderId, receiverId, message, sourceMessageIds) {
   const record = {
     id: Utilities.getUuid(),
     senderId,
@@ -257,8 +257,33 @@ function createMessageRecord(senderId, receiverId, message) {
     message: String(message || '').trim(),
     createdAt: new Date().toISOString()
   };
+  if (sourceMessageIds) record.sourceMessageIds = JSON.stringify(sourceMessageIds);
   appendRow('Messages', record);
   return record;
+}
+
+function journalSources(value) {
+  if (Array.isArray(value)) return value;
+  try { const parsed = JSON.parse(value || '[]'); return Array.isArray(parsed) ? parsed : []; } catch (_) { return []; }
+}
+
+function saveJournalRecord(userId, text, entryId, requestedSources) {
+  const messages = getSheetRows('Messages');
+  const entry = entryId ? messages.find(row => row.id === entryId && row.senderId === userId && row.receiverId === userId) : null;
+  if (entryId && !entry) return { success: false, error: 'Entry not found.' };
+  if (requestedSources !== undefined && !Array.isArray(requestedSources)) return { success: false, error: 'Invalid message links.' };
+  const sources = [...new Set([...journalSources(entry?.sourceMessageIds), ...(requestedSources || [])])];
+  if (sources.length > 100 || sources.some(id => typeof id !== 'string')) return { success: false, error: 'Invalid message links.' };
+  for (const id of sources) {
+    const source = messages.find(row => row.id === id && row.senderId !== row.receiverId && (row.senderId === userId || row.receiverId === userId));
+    if (!source) return { success: false, error: 'Source message not found.' };
+    const duplicate = messages.find(row => row.id !== entryId && row.senderId === userId && row.receiverId === userId && journalSources(row.sourceMessageIds).includes(id));
+    if (duplicate) return { success: false, error: 'See sõnum on juba märkmikus.', entryId: duplicate.id };
+  }
+  if (!entry) return { success: true, data: { message: createMessageRecord(userId, userId, text, sources) } };
+  const changes = { message: text, sourceMessageIds: JSON.stringify(sources) };
+  updateRowById('Messages', entry.id, changes);
+  return { success: true, data: { message: { ...entry, ...changes } } };
 }
 
 function getChatReads(userId) {
@@ -291,6 +316,7 @@ function getInboxForUser(userId) {
       receiverId: message.receiverId,
       message: message.message,
       createdAt: message.createdAt,
+      sourceMessageIds: message.senderId === message.receiverId ? journalSources(message.sourceMessageIds) : [],
       senderName: resolveUserName(message.senderId),
       receiverName: resolveUserName(message.receiverId)
     }));
@@ -305,6 +331,7 @@ function getSentMessagesForUser(userId) {
       receiverId: message.receiverId,
       message: message.message,
       createdAt: message.createdAt,
+      sourceMessageIds: message.senderId === message.receiverId ? journalSources(message.sourceMessageIds) : [],
       senderName: resolveUserName(message.senderId),
       receiverName: resolveUserName(message.receiverId)
     }));
@@ -538,7 +565,7 @@ function doGet() {
     migrateJsonDatabase();
     const state = {
       users: getUsersList(),
-      messages: getSheetRows('Messages'),
+      messages: getSheetRows('Messages').filter(message => message.senderId !== message.receiverId),
       scores: getSheetRows('Scores'),
       settings: getSheetRows('Settings')
     };
@@ -646,6 +673,24 @@ function doPost(e) {
         const updated = updateUserRecord(targetUser.id, { active, updatedAt: new Date().toISOString() });
         return { success: true, data: { user: toSafeUser(updated) } };
       });
+      return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'editJournalEntry') {
+      const user = validateSession(token);
+      if (!user) return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Authentication required.' })).setMimeType(ContentService.MimeType.JSON);
+      const text = String(body.message || '').trim();
+      if (!text || text.length > 10000) return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Entry must contain 1–10000 characters.' })).setMimeType(ContentService.MimeType.JSON);
+      const result = callWithLock('editJournalEntry', () => saveJournalRecord(user.id, text, String(body.id || ''), body.sourceMessageIds));
+      return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'addJournalEntry') {
+      const user = validateSession(token);
+      if (!user) return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Authentication required.' })).setMimeType(ContentService.MimeType.JSON);
+      const text = String(body.message || '').trim();
+      if (!text || text.length > 10000) return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Entry must contain 1–10000 characters.' })).setMimeType(ContentService.MimeType.JSON);
+      const result = callWithLock('addJournalEntry', () => saveJournalRecord(user.id, text, '', body.sourceMessageIds));
       return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
     }
 

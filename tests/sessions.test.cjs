@@ -155,3 +155,92 @@ test('login ignores username casing and whitespace but preserves password casing
   assert.equal(s.request('login', { name: 'unknown', password: 'password' }).success, false);
   assert.equal(s.request('login', { name: '   ', password: 'password' }).success, false);
 });
+
+
+test('journal entries always belong to the authenticated user', () => {
+  const s = server();
+  const token = s.login();
+  const saved = [];
+  s.c.createMessageRecord = (senderId, receiverId, message) => {
+    const record = { id: 'note', senderId, receiverId, message };
+    saved.push(record);
+    return record;
+  };
+  assert.equal(s.request('addJournalEntry', { message: 'Private' }).success, false);
+  const response = s.request('addJournalEntry', { token, receiverId: 'other-user', senderId: 'other-user', message: '  My note  ' });
+  assert.equal(response.success, true);
+  assert.deepEqual(saved, [{ id: 'note', senderId: 'user-a', receiverId: 'user-a', message: 'My note' }]);
+  assert.equal(s.request('addJournalEntry', { token, message: '   ' }).success, false);
+  assert.equal(s.request('addJournalEntry', { token, message: 'x'.repeat(10001) }).success, false);
+  assert.equal(saved.length, 1);
+});
+
+
+test('public database export excludes private notebook entries', () => {
+  const s = server();
+  const read = s.c.getSheetRows;
+  s.c.getSheetRows = name => name === 'Messages' ? [
+    { id: 'note', senderId: 'user-a', receiverId: 'user-a', message: 'Private journal' },
+    { id: 'chat', senderId: 'user-a', receiverId: 'user-b', message: 'Existing chat' }
+  ] : read(name);
+  const result = s.c.doGet();
+  assert.deepEqual(Array.from(result.messages, message => message.id), ['chat']);
+});
+
+test('editing journal text preserves creation date and rejects other users and chat messages', () => {
+  const s = server();
+  const token = s.login();
+  const rows = [
+    { id: 'mine', senderId: 'user-a', receiverId: 'user-a', message: 'Original', createdAt: '2026-01-01T12:00:00Z' },
+    { id: 'other', senderId: 'user-b', receiverId: 'user-b', message: 'Secret' },
+    { id: 'chat', senderId: 'user-a', receiverId: 'user-b', message: 'Chat' }
+  ];
+  const read = s.c.getSheetRows;
+  s.c.getSheetRows = name => name === 'Messages' ? rows : read(name);
+  s.c.updateRowById = (_, id, changes) => Object.assign(rows.find(row => row.id === id), changes);
+  const edit = (id, message = 'Edited', extra = {}) => s.request('editJournalEntry', { token, id, message, ...extra });
+  assert.equal(s.request('editJournalEntry', { id: 'mine', message: 'No token' }).success, false);
+  const result = edit('mine', 'Edited', { createdAt: '2099-01-01', senderId: 'user-b' });
+  assert.equal(result.success, true);
+  assert.equal(result.data.message.createdAt, '2026-01-01T12:00:00Z');
+  assert.equal(rows[0].createdAt, '2026-01-01T12:00:00Z');
+  assert.equal(rows[0].message, 'Edited');
+  for (const id of ['other', 'chat', 'missing']) assert.equal(edit(id).success, false);
+  assert.equal(edit('mine', ' ').success, false);
+  assert.equal(edit('mine', 'x'.repeat(10001)).success, false);
+  assert.equal(rows[1].message, 'Secret');
+  assert.equal(rows[2].message, 'Chat');
+});
+
+test('journal message links are private, unique per owner, and preserved during edits', () => {
+  const s = server();
+  const token = s.login();
+  const rows = [
+    { id: 'shared', senderId: 'user-a', receiverId: 'user-b', message: 'Chat' },
+    { id: 'incoming', senderId: 'user-b', receiverId: 'user-a', message: 'Reply' },
+    { id: 'foreign', senderId: 'user-b', receiverId: 'user-c', message: 'Secret' }
+  ];
+  const read = s.c.getSheetRows;
+  s.c.getSheetRows = name => name === 'Messages' ? rows : read(name);
+  s.c.createMessageRecord = (senderId, receiverId, message, sources) => {
+    const entry = { id: 'entry-' + rows.length, senderId, receiverId, message, createdAt: '2026-01-01', sourceMessageIds: JSON.stringify(sources) };
+    rows.push(entry); return entry;
+  };
+  s.c.updateRowById = (_, id, changes) => Object.assign(rows.find(row => row.id === id), changes);
+  const save = sources => s.request('addJournalEntry', { token, message: 'My thoughts', sourceMessageIds: sources });
+  const result = save(['shared']);
+  assert.equal(result.success, true);
+  const id = result.data.message.id;
+  assert.equal(save(['shared']).success, false, 'same owner cannot copy a source twice');
+  assert.equal(save(['foreign']).success, false, 'cannot link a private message between others');
+  assert.equal(save([id]).success, false, 'cannot copy a journal entry as a chat source');
+  assert.equal(save('shared').success, false);
+  assert.equal(save(['missing']).success, false);
+  const edited = s.request('editJournalEntry', { token, id, message: 'More thoughts', sourceMessageIds: ['incoming'] });
+  assert.equal(edited.success, true);
+  assert.deepEqual(JSON.parse(edited.data.message.sourceMessageIds), ['shared', 'incoming']);
+  assert.equal(edited.data.message.createdAt, '2026-01-01');
+  assert.equal(save(['incoming']).success, false);
+  // The other participant can create their own independent note about the same message.
+  assert.equal(s.c.saveJournalRecord('user-b', 'Their thoughts', '', ['shared']).success, true);
+});

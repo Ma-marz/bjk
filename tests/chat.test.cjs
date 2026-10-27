@@ -15,6 +15,7 @@ const assert = require('node:assert/strict');
       const body = route.request().postDataJSON();
       let data = {};
       if (body.action === 'login') data = { token: 'chat-test', user: users[0], users, leaderboard: [] };
+      if (body.action === 'getUsers') data = { users };
       if (body.action === 'getInbox') data = { messages: inbox, readStates: [...readStates].map(([peerId, lastReadAt]) => ({ peerId, lastReadAt })) };
       if (body.action === 'markChatRead') {
         const message = inbox.find(message => message.id === body.messageId);
@@ -22,11 +23,24 @@ const assert = require('node:assert/strict');
         data = { peerId: body.peerId, lastReadAt: message.createdAt };
       }
       if (body.action === 'getSentMessages') data = { messages: sent };
+      if (body.action === 'addJournalEntry') {
+        if (!fail) {
+          const message = { id: 'journal-' + inbox.length, sourceMessageIds: body.sourceMessageIds || [], senderId: 'me', receiverId: 'me', message: body.message, createdAt: new Date().toISOString() };
+          inbox.push(message);
+          data = { message };
+        }
+      }
+      if (body.action === 'editJournalEntry' && !fail) {
+        const message = inbox.find(message => message.id === body.id);
+        message.message = body.message;
+        message.sourceMessageIds = body.sourceMessageIds || message.sourceMessageIds || [];
+        data = { message };
+      }
       if (body.action === 'sendMessage') {
         await new Promise(resolve => setTimeout(resolve, 150));
         if (!fail) { const message = { id: String(sent.length + 10), senderId: 'me', receiverId: body.receiverId, message: body.message, createdAt: new Date().toISOString() }; sent.push(message); data = { message }; }
       }
-      await route.fulfill({ json: { success: !(body.action === 'sendMessage' && fail), data } });
+      await route.fulfill({ json: { success: !(['sendMessage', 'addJournalEntry', 'editJournalEntry'].includes(body.action) && fail), data } });
     });
     await page.goto(process.env.BJK_TEST_URL || 'http://localhost:8000');
     await page.fill('#name', 'Leo'); await page.fill('#password', 'test'); await page.click('#loginButton');
@@ -88,9 +102,89 @@ const assert = require('node:assert/strict');
     assert.equal(await page.locator('[data-user-id="b"].unread').count(), 1);
     await page.click('[data-user-id="b"]');
     await page.waitForFunction(() => !document.querySelector('[data-view="messages"]').classList.contains('has-unread'));
+    await page.click('[data-view="journal"]');
+    await page.fill('#journalText', 'A private thought <b>kept as text</b>');
+    fail = true;
+    await page.click('#saveJournal');
+    await page.waitForSelector('#journalError:not(.hidden)');
+    assert.equal(await page.inputValue('#journalText'), 'A private thought <b>kept as text</b>');
+    fail = false;
+    await page.click('#saveJournal');
+    await page.waitForSelector('.journal-entry');
+    assert.equal(await page.inputValue('#journalText'), '');
+    assert.equal(await page.locator('.journal-body').textContent(), 'A private thought <b>kept as text</b>');
+    assert.equal(await page.locator('.journal-body b').count(), 0);
+    await page.evaluate(() => refreshChatMessages());
+    assert.equal(await page.locator('.journal-entry').count(), 1);
+    assert.equal(await page.locator('.conversation').count(), 3, 'notes do not create a self-chat');
+    assert.equal(await page.locator('[data-view="messages"]').evaluate(el => el.classList.contains('has-unread')), false);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    const originalDate = await page.locator('.journal-date').textContent();
+    await page.fill('#journalText', 'Draft of a new note');
+    assert.equal(await page.locator('.journal-entry').count(), 0, 'draft hides previous entries');
+    await page.click('#cancelJournalEdit');
+    await page.click('.journal-edit');
+    assert.equal(await page.inputValue('#journalText'), 'A private thought <b>kept as text</b>');
+    await page.fill('#journalText', 'Cancelled edit');
+    await page.click('#cancelJournalEdit');
+    assert.equal(await page.inputValue('#journalText'), '');
+    await page.click('.journal-edit');
+    await page.fill('#journalText', 'Updated thought');
+    await page.evaluate(() => refreshChatMessages());
+    assert.equal(await page.inputValue('#journalText'), 'Updated thought', 'polling preserves edit draft');
+    fail = true;
+    await page.click('#saveJournal');
+    await page.waitForSelector('#journalError:not(.hidden)');
+    assert.equal(await page.inputValue('#journalText'), 'Updated thought');
+    fail = false;
+    await page.click('#saveJournal');
+    await page.waitForFunction(() => document.querySelector('.journal-body')?.textContent === 'Updated thought');
+    assert.equal(await page.locator('.journal-date').textContent(), originalDate);
+    assert.equal(await page.locator('.journal-entry').count(), 1);
+    assert.equal(await page.inputValue('#journalText'), '');
+
+    await page.fill('#journalText', 'Existing unsaved thought');
+    await page.click('[data-view="messages"]');
+    await page.evaluate(() => openConversation('a'));
+    const firstBubble = page.locator('.chat-bubble').filter({ hasText: 'Old outgoing' });
+    await firstBubble.dispatchEvent('pointerdown', { button: 0, clientX: 10, clientY: 10 });
+    await page.waitForSelector('#messageActions[open]');
+    await firstBubble.dispatchEvent('pointerup', { button: 0 });
+    await page.click('#copyMessageToJournal');
+    assert.equal(await page.locator('#view-journal').isVisible(), true);
+    assert.match(await page.inputValue('#journalText'), /Existing unsaved thought[\s\S]*Old outgoing/);
+    assert.equal(await page.locator('.journal-entry').count(), 0);
+    assert.equal(inbox.filter(message => message.senderId === 'me' && message.receiverId === 'me').length, 1, 'copy only creates a draft');
+    await page.click('[data-view="messages"]');
+    assert.equal(await firstBubble.locator('.message-journal-link').count(), 1);
+    await firstBubble.locator('.message-journal-link').click();
+    assert.equal((await page.inputValue('#journalText')).split('Old outgoing').length - 1, 1, 'copy cannot duplicate a message');
+    await page.click('[data-view="messages"]');
+    const incoming = page.locator('.chat-bubble').filter({ hasText: '<img src=x onerror=alert(1)>' });
+    await incoming.click({ button: 'right' });
+    await page.click('#copyMessageToJournal');
+    const copiedDraft = await page.inputValue('#journalText');
+    assert.match(copiedDraft, /Old outgoing[\s\S]*<img src=x onerror=alert\(1\)>/);
+    await page.reload();
+    await page.waitForSelector('#appScreen:not(.hidden)');
+    await page.waitForFunction(() => pendingReads.size === 0);
+    await page.click('[data-view="journal"]');
+    assert.equal(await page.inputValue('#journalText'), copiedDraft, 'draft survives reload');
+    assert.equal(await page.locator('.journal-entry').count(), 0, 'draft still locks older entries');
+    await page.fill('#journalText', copiedDraft + 'My thoughts about these messages');
+    await page.click('#saveJournal');
+    await page.waitForSelector('.journal-entry');
+    assert.equal(await page.locator('.journal-entry').count(), 2);
+    await page.click('[data-view="messages"]');
+    await page.evaluate(() => openConversation('a'));
+    assert.equal(await page.locator('.message-journal-link').count(), 2);
+    await page.locator('.message-journal-link').first().click();
+    assert.match(await page.inputValue('#journalText'), /My thoughts about these messages/);
+    await page.click('#cancelJournalEdit');
     await page.click('#logoutButton');
     await page.waitForSelector('#appScreen.hidden', { state: 'attached' });
     assert.equal(await page.inputValue('#messageText'), '');
+    assert.equal(await page.locator('.journal-entry').count(), 0);
     assert.deepEqual(errors, []);
     console.log('PASS: legacy threads, safe text, per-person drafts, failed/successful send, refresh, former members, mobile navigation, layout and logout');
   } finally { await browser.close(); }
