@@ -74,3 +74,14 @@ Unfinished journal drafts, including edits and copied-message links, are saved
 per account in this browser's local storage and restored after reopening the
 page. They are not yet saved to the database or synced to other devices.
 Previous entries remain hidden until the user saves or discards the draft.
+
+The journal shows one entry per page, ordered from oldest to newest, with a
+single blank new-entry page at the right end. Use the arrow buttons or swipe
+horizontally to turn pages, or choose **Uus leht** to return to the blank page.
+Drafts block page changes until saved or discarded. Chat links open saved notes
+in reading mode; **Muuda** explicitly starts editing.
+
+While editing an entry, **Kustuta märge** permanently deletes it after confirmation.
+The backend checks ownership and only permits deleting self-addressed journal
+records. Deletion also removes its chat links, allowing those messages to be
+copied to a new note again. Deploy the updated backend to enable deletion.

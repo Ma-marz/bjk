@@ -244,3 +244,22 @@ test('journal message links are private, unique per owner, and preserved during 
   // The other participant can create their own independent note about the same message.
   assert.equal(s.c.saveJournalRecord('user-b', 'Their thoughts', '', ['shared']).success, true);
 });
+
+test('journal deletion only removes the authenticated user’s own self-addressed entry', () => {
+  const s = server();
+  const token = s.login();
+  const rows = [
+    { id: 'mine', senderId: 'user-a', receiverId: 'user-a' },
+    { id: 'other', senderId: 'user-b', receiverId: 'user-b' },
+    { id: 'chat', senderId: 'user-a', receiverId: 'user-b' }
+  ];
+  const read = s.c.getSheetRows;
+  s.c.getSheetRows = name => name === 'Messages' ? rows : read(name);
+  s.c.ensureSchema = name => ({ deleteRow(row) { assert.equal(name, 'Messages'); rows.splice(row - 2, 1); } });
+  const remove = id => s.request('deleteJournalEntry', { token, id });
+  assert.equal(s.request('deleteJournalEntry', { id: 'mine' }).success, false);
+  for (const id of ['other', 'chat', 'missing']) assert.equal(remove(id).success, false);
+  assert.equal(remove('mine').success, true);
+  assert.deepEqual(rows.map(row => row.id), ['other', 'chat']);
+  assert.equal(remove('mine').success, false);
+});

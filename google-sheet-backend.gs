@@ -676,6 +676,19 @@ function doPost(e) {
       return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
     }
 
+    if (action === 'deleteJournalEntry') {
+      const user = validateSession(token);
+      if (!user) return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Authentication required.' })).setMimeType(ContentService.MimeType.JSON);
+      const result = callWithLock('deleteJournalEntry', () => {
+        const rows = getSheetRows('Messages');
+        const index = rows.findIndex(entry => entry.id === String(body.id || '') && entry.senderId === user.id && entry.receiverId === user.id);
+        if (index < 0) return { success: false, error: 'Entry not found.' };
+        ensureSchema('Messages').deleteRow(index + 2);
+        return { success: true, data: { id: rows[index].id } };
+      });
+      return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+    }
+
     if (action === 'editJournalEntry') {
       const user = validateSession(token);
       if (!user) return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Authentication required.' })).setMimeType(ContentService.MimeType.JSON);

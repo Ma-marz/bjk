@@ -109,12 +109,18 @@
 
                 <div id="view-journal" class="view-panel hidden">
                     <div class="section-heading"><div><span class="eyebrow">Mõtted ja meenutused</span><h2>Märkmik</h2><p>Sinu isiklikud märkmed.</p></div><button id="refreshJournal" type="button" class="ghost-button">Värskenda</button></div>
-                    <div class="notebook">
+                    <div id="journalNotebook" class="notebook">
+                        <nav class="journal-pagination" aria-label="Märkmiku leheküljed">
+                            <button id="journalPrevious" type="button" class="ghost-button" aria-label="Eelmine leht">←</button>
+                            <span id="journalPageNumber" aria-live="polite"></span>
+                            <button id="journalNext" type="button" class="ghost-button" aria-label="Järgmine leht">→</button>
+                            <button id="journalNewPage" type="button" class="ghost-button">Uus leht</button>
+                        </nav>
+                        <div id="journalError" class="message error hidden" role="alert"></div>
                         <form id="journalForm" class="journal-form">
                             <label id="journalEditorLabel" for="journalText">Uus märge</label>
                             <textarea id="journalText" rows="5" maxlength="10000" placeholder="Mis sul mõttes on?" required></textarea>
-                            <div id="journalError" class="message error hidden" role="alert"></div>
-                            <div class="journal-actions"><button id="cancelJournalEdit" type="button" class="ghost-button hidden">Loobu muutmisest</button><button id="saveJournal" type="submit" class="primary-button">Salvesta märge</button></div>
+                            <div class="journal-actions"><button id="deleteJournalEntry" type="button" class="ghost-button journal-delete hidden">Kustuta märge</button><button id="cancelJournalEdit" type="button" class="ghost-button hidden">Loobu muutmisest</button><button id="saveJournal" type="submit" class="primary-button">Salvesta märge</button></div>
                         </form>
                         <div id="journalEntries" aria-label="Sinu märkmed"></div>
                     </div>
@@ -249,7 +255,7 @@
     </dialog>
     <script id="fileEndpointConfig">
         // Generated from tools/prayer-generator/config.json by sync_config.py.
-        window.BJK_FILE_ENDPOINT = "https://script.google.com/macros/s/AKfycbyaPVlkbgc8n3S611txMyC05oeKNF4V5-quXgOeD871_WgatbpSzlWJ2buv5LrwPXw/exec";
+        window.BJK_FILE_ENDPOINT = "https://script.google.com/macros/s/AKfycbx_fInwDg4lOjfcJbqs5Ls_vp37lDqZuRVJBfuMd47kMC6S5BNnivQFn_Q413Aj_c-D/exec";
     </script>
     <script src="prayer/available-weeks.js"></script>
     <script src="games/security.js"></script>

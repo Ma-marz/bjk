@@ -229,7 +229,7 @@ body:has(#appScreen.hidden) .site-footer { padding-bottom: 24px; }
 
 .notebook { max-width: 850px; margin: auto; border: 1px solid var(--border); border-radius: 6px; background: linear-gradient(90deg, transparent 37px, #b5524740 37px 39px, transparent 39px), var(--paper-light); box-shadow: 4px 4px 0 #e7d5b2, 5px 5px 0 var(--border); padding: 24px 24px 24px 56px; }
 .journal-form { display: grid; gap: 10px; }
-.journal-form textarea { min-height: 160px; line-height: 28px; background: repeating-linear-gradient(transparent 0 27px, #bba17a55 27px 28px); background-attachment: scroll; background-position: 0 var(--journal-line-offset, 0px); overscroll-behavior: none; border: 0; padding: 0 4px; font-family: Georgia, serif; }
+.journal-form textarea { min-height: 160px; line-height: 28px; background: repeating-linear-gradient(transparent 0 27px, #bba17a55 27px 28px); background-attachment: scroll; resize: none; overflow: hidden; overscroll-behavior: auto; touch-action: pan-y; border: 0; padding: 0 4px; font-family: Georgia, serif; }
 .journal-form button { justify-self: end; }
 .journal-entry { padding: 24px 0; border-top: 1px dashed var(--border); margin-top: 20px; }
 .journal-date { color: var(--muted); font: 11px system-ui, sans-serif; }
@@ -248,3 +248,16 @@ body:has(#appScreen.hidden) .site-footer { padding-bottom: 24px; }
 .journal-draft-notice { color: var(--muted); font: 12px/1.6 system-ui, sans-serif; padding: 20px 0; border-top: 1px dashed var(--border); margin-top: 20px; }
 
 .chat-bubble { -webkit-touch-callout: none; }
+
+.journal-pagination { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid var(--border); }
+#journalPageNumber { flex: 1; text-align: center; font: 12px system-ui, sans-serif; color: var(--muted); }
+.journal-pagination button { padding: 8px 12px; }
+.journal-pagination button:disabled { cursor: default; }
+#journalNotebook { touch-action: pan-y; }
+.journal-entry { margin-top: 0; border-top: 0; min-height: 220px; }
+.journal-body { line-height: 28px; background: repeating-linear-gradient(transparent 0 27px, #bba17a55 27px 28px); }
+
+.message-journal-link { display: inline-flex; align-items: center; justify-content: center; }
+.message-journal-link .icon { width: 21px; height: 21px; }
+
+.journal-delete { color: var(--danger); border-color: var(--danger); margin-right: auto; }
