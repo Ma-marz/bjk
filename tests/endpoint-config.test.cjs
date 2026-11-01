@@ -29,3 +29,13 @@ test('HTTP mode reads shared JSON, coalesces reads, and retries failed configura
   assert.deepEqual(results, [config.google_sheet_endpoint, config.google_sheet_endpoint]);
   assert.equal(calls, 2);
 });
+
+
+test('published scripts and styles use their current content hashes to bypass stale mobile caches', () => {
+  const { createHash } = require('node:crypto');
+  const html = fs.readFileSync('index.html', 'utf8');
+  for (const asset of ['script.js', 'prayer/history-ui.js', 'prayer/history.js', 'styles.css']) {
+    const hash = createHash('sha256').update(fs.readFileSync(asset)).digest('hex').slice(0, 12);
+    assert.ok(html.includes(`${asset}?v=${hash}`), `${asset} must have a fresh asset URL`);
+  }
+});

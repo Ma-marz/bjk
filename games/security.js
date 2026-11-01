@@ -94,7 +94,8 @@
   }
   function register(id) {
     const files = { portal: '/script.js', 'bjker-mario': '/game/game-script.js', 'bjk-memory': '/games/memory/memory.js', 'bjk-flappy': '/games/flappy/flappy.js' };
-    if (!files[id] || clients.has(id) || !document.currentScript?.src.endsWith(files[id])) {
+    const scriptPath = document.currentScript?.src ? new URL(document.currentScript.src).pathname : '';
+    if (!files[id] || clients.has(id) || !scriptPath.endsWith(files[id])) {
       block('Unauthorized game registration');
       throw new Error('Game registration denied');
     }

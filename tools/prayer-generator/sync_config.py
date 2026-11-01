@@ -1,5 +1,6 @@
 """Sync the endpoint from config.json into index.html for direct-file access."""
 import json
+import hashlib
 from pathlib import Path
 import re
 
@@ -25,6 +26,15 @@ def sync_config(config_path=HERE / 'config.json', page_path=DEFAULT_PAGE):
         if marker not in page:
             raise ValueError('Could not locate site configuration insertion point')
         page = page.replace(marker, '    ' + block + '\n' + marker, 1)
+    # Version local scripts/styles by content so cached mobile pages cannot mix releases.
+    def version_asset(match):
+        prefix, url, suffix = match.groups()
+        asset = page_path.parent / url.split('?', 1)[0]
+        if not asset.is_file():
+            return match.group(0)
+        version = hashlib.sha256(asset.read_bytes()).hexdigest()[:12]
+        return prefix + url.split('?', 1)[0] + '?v=' + version + suffix
+    page = re.sub(r'((?:src|href)=")([^"?]+\.(?:js|css)(?:\?[^" ]*)?)(")', version_asset, page)
     atomic_write(page_path, page.encode('utf-8'))
 
 

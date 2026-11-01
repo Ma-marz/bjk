@@ -9,10 +9,19 @@ history.weeks['32'] = { ...history.weeks['31'], week: 32, date: '2026-11-01' };
   const browser = await chromium.launch({ headless: true });
   try {
     for (const mode of ['file', 'http']) {
-      const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
       const errors = [];
       let failHistory = false;
-      page.on('pageerror', error => errors.push(error.message));
+      page.on('pageerror', error => { errors.push(error.message); console.error('PAGE ERROR', mode, error.message); });
+      await page.addInitScript(() => {
+        localStorage.setItem('bjkCurrentUser', JSON.stringify({ token: 'mobile-history-session', user: { id: 'leo', name: 'Leo', active: true } }));
+      });
+      await page.route('https://script.google.com/**', async route => {
+        const action = route.request().postDataJSON().action;
+        const data = action === 'getUsers' ? { users: [{ id: 'leo', name: 'Leo', active: true }] }
+          : action === 'getLeaderboard' ? { leaderboard: [] } : { messages: [], readStates: [] };
+        await route.fulfill({ json: { success: true, data } });
+      });
       await page.clock.install({ time: new Date('2026-11-01T12:00:00Z') });
       if (mode === 'http') await page.route('http://prayer-history.test/**', async route => {
         const pathname = new URL(route.request().url()).pathname;
@@ -21,19 +30,13 @@ history.weeks['32'] = { ...history.weeks['31'], week: 32, date: '2026-11-01' };
         }
         const target = path.join(process.cwd(), pathname === '/' ? 'index.html' : pathname);
         if (!fs.existsSync(target) || !fs.statSync(target).isFile()) { await route.fulfill({ status: 404, body: '' }); return; }
-        const types = { '.js': 'text/javascript', '.json': 'application/json', '.html': 'text/html', '.css': 'text/css', '.svg': 'image/svg+xml', '.pdf': 'application/pdf', '.png': 'image/png' };
+        const types = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.html': 'text/html', '.css': 'text/css', '.svg': 'image/svg+xml', '.pdf': 'application/pdf', '.png': 'image/png' };
         await route.fulfill({ contentType: types[path.extname(target)] || 'application/octet-stream', body: fs.readFileSync(target) });
       });
       await page.goto(mode === 'file' ? pathToFileURL(path.resolve('index.html')).href : 'http://prayer-history.test/');
-      await page.evaluate(async data => {
-        window.BJK_PRAYER_HISTORY = data;
-        appState.currentUser = { id: 'leo', name: 'Leo' };
-        document.getElementById('loginScreen').classList.add('hidden');
-        document.getElementById('appScreen').classList.remove('hidden');
-        await renderPrayerHistory();
-      }, history);
+      try { await page.waitForFunction(() => document.getElementById('currentPrayerName').textContent !== 'Laadin…', null, { timeout: 8000 }); } catch (error) { console.error('STARTUP', mode, await page.evaluate(() => ({ user: typeof appState !== 'undefined' ? appState.currentUser : null, session: localStorage.getItem('bjkCurrentUser'), ready: document.readyState, historyFunction: typeof renderPrayerHistory, initFunction: typeof initializeApp }))); throw error; }
       assert.equal(await page.locator('#currentPrayerName').textContent(), history.weeks['31'].assignments['Leo Kask']);
-      await page.click('#currentPrayer');
+      await page.tap('#currentPrayer');
       assert.equal(await page.locator('#view-prayer-history').isVisible(), true);
       assert.equal(await page.locator('.prayer-history-week').count(), 7);
       const current = page.locator('.prayer-history-week.current');

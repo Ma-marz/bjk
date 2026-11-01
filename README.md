@@ -103,3 +103,7 @@ seven days, so early generation does not shift a prayer week. Future weeks are
 omitted; the current week shows only the user's outgoing assignment. Earlier
 weeks also show who prayed for that user. Only weeks recorded in history.json
 can appear; older PDFs without history records do not invent assignments.
+
+`sync_config.py` also adds content hashes to local script and stylesheet URLs.
+Run it after frontend changes before publishing so mobile browsers fetch the
+updated files instead of combining a new page with cached older scripts.
