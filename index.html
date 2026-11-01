@@ -68,6 +68,9 @@
                         <div><span class="eyebrow">Kelle eest palvetad sa sellel nädalal?</span><h2>Eestpalvesedelid</h2><p>Ära unusta sellele inimesele nädala lõpus kirjutada. Me kõik igatseme teada, et meie eest palvetatakse :)</p></div><svg class="heading-compass icon" aria-hidden="true"><use href="#icon-compass"/></svg>
                     </div>
 
+                    <button id="currentPrayer" class="current-prayer" type="button" aria-label="Ava palveajalugu">
+                        <span class="eyebrow">hetkel palves</span><strong id="currentPrayerName">Laadin…</strong><span class="prayer-history-hint">Vaata palveajalugu →</span>
+                    </button>
                     <div class="prayer-toolbar">
                         <label for="prayerSelect" class="visually-hidden">Vali sedel</label>
                         <select id="prayerSelect" class="prayer-select"></select>
@@ -85,6 +88,12 @@
                     <div id="openPDFButtonDiv" class="mobile-open hidden">
                         <button id="openPDFButton" type="button" class="primary-button">Ava PDF uuel lehel</button>
                     </div>
+                </div>
+
+                <div id="view-prayer-history" class="view-panel hidden">
+                    <div class="section-heading"><div><span class="eyebrow">Nädalast nädalasse</span><h2>Palveajalugu</h2></div><button id="prayerHistoryBack" class="ghost-button" type="button">← Tagasi</button></div>
+                    <div id="prayerHistoryError" class="message error hidden" role="alert">Palveajaloo laadimine ebaõnnestus. <button id="prayerHistoryRetry" class="ghost-button" type="button">Proovi uuesti</button></div>
+                    <div id="prayerHistoryList" class="prayer-history-list"></div>
                 </div>
 
                 <div id="view-messages" class="view-panel hidden">
@@ -131,7 +140,7 @@
                             <p>Kirjuta uuele lehele ja vajuta „Salvesta märge”. Kirjutusala kasvab koos tekstiga ning selle peal kerides liigub kogu leht. Salvestatud lehel saad valida „Muuda”. Muutmisel jääb alles märkme algne kuupäev. „Kustuta märge” eemaldab selle pärast kinnitamist jäädavalt.</p>
                             <p>Pooleli tekst säilib selles brauseris mustandina ka siis, kui lahkud märkmikust või avad lehe uuesti. See ei ole veel kontole salvestatud ega ilmu teistes seadmetes. Teiste lehtede avamiseks salvesta mustand või vali „Loobu mustandist”. Muutmisest loobumine jätab varasema salvestatud märkme alles.</p>
                             <p>Vestluses tee sõnumil topeltklõps või topeltpuudutus ja vali „Ava uus märge”. Sõnum lisatakse märkmiku mustandisse, kus saad oma mõtted juurde kirjutada. Kui mustand on juba pooleli, lisatakse sõnum selle lõppu. Pikalt vajutades saad sõnumi teksti endiselt tavalisel viisil kopeerida.</p>
-                            <p>Raamatuikoon sõnumi juures avab seotud mustandi või salvestatud märkme lugemiseks. Sama sõnumit saab nii lisada ainult ühte märkmesse. Kui sõnum oli ainult uues mustandis, saad sellest loobumise järel sõnumi uuesti lisada. Salvestatud märkme puhul vabastab seose märkme kustutamine.</p>
+                            <p>Raamatuikoon sõnumi juures avab seotud mustandi või salvestatud märkme lugemiseks. Märkme juures olev „Ava sõnum” viib tagasi vestlusesse ja toob esile täpse sõnumi. Sama sõnumit saab nii lisada ainult ühte märkmesse. Kui sõnum oli ainult uues mustandis, saad sellest loobumise järel sõnumi uuesti lisada. Salvestatud märkme puhul vabastab seose märkme kustutamine.</p>
                         </div>
                     </details>
                 </div>
@@ -268,6 +277,8 @@
         window.BJK_FILE_ENDPOINT = "https://script.google.com/macros/s/AKfycbx_fInwDg4lOjfcJbqs5Ls_vp37lDqZuRVJBfuMd47kMC6S5BNnivQFn_Q413Aj_c-D/exec";
     </script>
     <script src="prayer/available-weeks.js"></script>
+    <script src="prayer/history.js"></script>
+    <script src="prayer/history-ui.js"></script>
     <script src="games/security.js"></script>
     <script src="script.js"></script>
     <script src="games/memory/memory.js"></script>

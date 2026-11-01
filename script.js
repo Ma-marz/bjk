@@ -100,6 +100,7 @@ function setSessionState(token, user = null) {
 }
 
 function clearSession() {
+    clearPrayerHistoryView();
     persistJournalDraft();
     journalDeletedIds.clear();
     journalDraftOwner = '';
@@ -115,6 +116,8 @@ function clearSession() {
     renderDataActivity();
     appState.users = [];
     chatState.selectedId = '';
+    chatState.linkedMessageId = '';
+    chatState.jumpToMessageId = '';
     chatState.drafts.clear();
     chatState.unreadBoundaryId = '';
     chatState.readTimes.clear();
@@ -328,8 +331,8 @@ function showView(viewName) {
     appState.currentView = viewName;
     renderDataActivity();
     document.querySelectorAll('.nav-button').forEach((button) => {
-        button.classList.toggle('active', button.dataset.view === viewName);
-        if (button.dataset.view === viewName) button.setAttribute('aria-current', 'page');
+        button.classList.toggle('active', button.dataset.view === (viewName === 'prayer-history' ? 'prayers' : viewName));
+        if (button.dataset.view === (viewName === 'prayer-history' ? 'prayers' : viewName)) button.setAttribute('aria-current', 'page');
         else button.removeAttribute('aria-current');
     });
 
@@ -338,6 +341,7 @@ function showView(viewName) {
         panel.classList.toggle('hidden', !shouldShow);
         panel.classList.toggle('active', shouldShow);
     });
+    if (viewName === 'prayer-history') renderPrayerHistory();
     if (changed && viewName === 'journal') { renderJournal(); refreshChatMessages(); }
     if (changed && viewName === 'messages') {
         refreshChatMessages();
@@ -715,9 +719,11 @@ function getConversations() {
     return [...people.values()].sort((a, b) => timestamp(b.messages.at(-1)) - timestamp(a.messages.at(-1)) || a.name.localeCompare(b.name, 'et'));
 }
 
-function openConversation(id) {
+function openConversation(id, messageId = '') {
     if (chatState.selectedId) chatState.drafts.set(chatState.selectedId, document.getElementById('messageText').value);
     chatState.selectedId = id;
+    chatState.linkedMessageId = messageId;
+    chatState.jumpToMessageId = messageId;
     chatState.unreadBoundaryId = '';
     chatState.renderedKey = '';
     hideMessage('messageFormError');
@@ -830,6 +836,22 @@ function openLinkedJournal(messageId) {
     }
     journalPageId = link.draft ? '' : link.id;
     renderJournal();
+}
+
+function findJournalSource(messageId) {
+    const me = appState.currentUser?.id;
+    return [...appState.inboxMessages, ...appState.sentMessages].find(message => message.id === messageId && message.senderId !== message.receiverId && (message.senderId === me || message.receiverId === me));
+}
+
+async function openJournalSource(messageId) {
+    const token = appState.sessionToken;
+    let message = findJournalSource(messageId);
+    if (!message) { await refreshChatMessages(); message = findJournalSource(messageId); }
+    if (appState.sessionToken !== token) return;
+    if (!message) { showMessage('journalError', 'Seotud sõnumit ei leitud. Proovi märkmeid värskendada.', 'error'); return; }
+    const peerId = message.senderId === appState.currentUser.id ? message.receiverId : message.senderId;
+    showView('messages');
+    openConversation(peerId, messageId);
 }
 
 function copyMessageToJournal(message) {
@@ -955,6 +977,22 @@ function renderJournal() {
         const page = chatText('article', 'journal-entry', '');
         page.dataset.entryId = selected.id;
         page.append(chatText('time', 'journal-date', chatDate(selected.createdAt, false) + ' · ' + chatDate(selected.createdAt, true)), chatText('div', 'journal-body', selected.message));
+        const sources = journalSourceIds(selected.sourceMessageIds);
+        if (sources.length) {
+            const links = chatText('div', 'journal-source-links', '');
+            sources.forEach(id => {
+                const source = findJournalSource(id);
+                const link = chatText('button', 'ghost-button journal-source-link', '');
+                link.type = 'button';
+                const peerId = source && (source.senderId === appState.currentUser.id ? source.receiverId : source.senderId);
+                const peer = appState.users.find(user => user.id === peerId)?.name || (source?.senderId === appState.currentUser.id ? source?.receiverName : source?.senderName) || 'Vestlus';
+                link.append(chatText('span', '', source ? `Ava sõnum · ${peer} · ${chatDate(source.createdAt, false)}` : 'Ava seotud sõnum'));
+                if (source) link.append(chatText('small', 'journal-source-preview', source.message));
+                link.addEventListener('click', () => openJournalSource(id));
+                links.append(link);
+            });
+            page.append(links);
+        }
         const edit = chatText('button', 'ghost-button journal-edit', 'Muuda');
         edit.type = 'button'; edit.disabled = journalSaving;
         edit.addEventListener('click', () => editJournalEntry(selected));
@@ -1074,7 +1112,7 @@ function renderMessages() {
             (Date.parse(message.createdAt) || 0) > readAt);
         chatState.unreadBoundaryId = firstUnread?.id || '';
     }
-    const key = JSON.stringify([person?.id, person?.messages, chatState.unreadBoundaryId, appState.inboxMessages.filter(entry => entry.senderId === entry.receiverId), journalDraftSources]);
+    const key = JSON.stringify([person?.id, person?.messages, chatState.unreadBoundaryId, chatState.linkedMessageId, appState.inboxMessages.filter(entry => entry.senderId === entry.receiverId), journalDraftSources]);
     if (key === chatState.renderedKey) return;
     const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
     const switched = !chatState.renderedKey;
@@ -1094,11 +1132,18 @@ function renderMessages() {
             log.append(unreadDivider);
         }
         const bubble = chatText('div', 'chat-bubble' + (message.senderId === appState.currentUser.id ? ' outgoing' : ''), '');
+        bubble.dataset.messageId = message.id || '';
+        bubble.classList.toggle('chat-linked-target', message.id === chatState.linkedMessageId);
         bubble.append(chatText('div', 'chat-body', message.message), chatText('small', 'chat-time', chatDate(message.createdAt, true)));
         bindMessageJournalActions(bubble, message);
         log.append(bubble);
     });
-    if (switched && unreadDivider) {
+    const linkedTarget = chatState.jumpToMessageId && [...log.querySelectorAll('.chat-bubble')].find(bubble => bubble.dataset.messageId === chatState.jumpToMessageId);
+    if (linkedTarget) {
+        chatState.jumpToMessageId = '';
+        log.scrollTop += linkedTarget.getBoundingClientRect().top - log.getBoundingClientRect().top - (log.clientHeight - linkedTarget.offsetHeight) / 2;
+        linkedTarget.focus({ preventScroll: true });
+    } else if (switched && unreadDivider) {
         log.scrollTop += unreadDivider.getBoundingClientRect().top - log.getBoundingClientRect().top - 12;
     } else if (switched || atBottom) log.scrollTop = log.scrollHeight;
 }
@@ -1195,6 +1240,7 @@ function renderAuthenticatedState() {
     }
 
     renderPrayers();
+    renderPrayerHistory();
     renderMembers();
     renderMessages();
     renderLeaderboard();
@@ -1640,6 +1686,7 @@ guard.onBlock(() => {
 
 
 function setUpEventBindings() {
+    setUpPrayerHistory();
     setUpActivityDismissal();
     document.getElementById('loginForm')?.addEventListener('submit', handleLogin);
     document.getElementById('logoutButton')?.addEventListener('click', handleLogout);

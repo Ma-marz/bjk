@@ -190,7 +190,7 @@ def generate(config_path, template_path, history_path, output):
         for path, content in documents:
             atomic_write(path, content)
         from update_index import write_index
-        write_index(output)
+        write_index(output, history_path)
         print(f"Generated {len(documents)} PDFs for week {week} in {Path(output).resolve()}")
         return True
 

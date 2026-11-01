@@ -271,3 +271,26 @@ body:has(#appScreen.hidden) .site-footer { padding-bottom: 24px; }
 .journal-help summary:hover { color: var(--ink); }
 .journal-help-text { font-size: 14px; line-height: 1.7; }
 .journal-help-text p { margin: 0 0 14px; }
+
+.journal-source-links { display: grid; gap: 8px; margin-top: 22px; }
+.journal-source-link { text-align: left; min-width: 0; }
+.journal-source-preview { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 100%; margin-top: 5px; color: var(--muted); font-weight: normal; }
+.chat-linked-target { outline: 2px solid var(--gold-deep); outline-offset: 3px; }
+
+.current-prayer { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 3px 12px; width: 100%; margin: 0 0 12px; padding: 10px 0; border: 0; border-bottom: 1px solid var(--border); background: transparent; text-align: left; color: var(--ink); }
+.current-prayer strong { font-size: 21px; font-weight: normal; overflow-wrap: anywhere; }
+.prayer-history-hint { font: 11px system-ui, sans-serif; color: var(--muted); }
+.prayer-history-list { max-width: 850px; }
+.prayer-history-week { padding: 24px 0; border-bottom: 1px dashed var(--border); }
+.prayer-history-week.current { border-left: 3px solid var(--primary); padding-left: 18px; }
+.prayer-history-week h3 { margin-bottom: 8px; }
+.prayer-week-dates { color: var(--muted); font: 12px system-ui, sans-serif; }
+.prayer-history-label { display: block; color: var(--muted); font: 11px system-ui, sans-serif; margin-bottom: 4px; }
+.prayer-history-week strong { font-weight: normal; font-size: 20px; }
+.current-prayer .eyebrow { grid-column: 1 / -1; text-transform: none; }
+.prayer-history-week { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 20px; }
+.prayer-history-week h3, .prayer-week-dates { grid-column: 1 / -1; }
+.prayer-history-week > p:not(.prayer-week-dates) { min-width: 0; margin-bottom: 0; overflow-wrap: anywhere; }
+.prayer-history-week.current > p:not(.prayer-week-dates) { grid-column: 1 / -1; }
+
+#view-prayers > .section-heading { margin-bottom: 0; padding-bottom: 12px; }

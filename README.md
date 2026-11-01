@@ -85,3 +85,21 @@ While editing an entry, **Kustuta märge** permanently deletes it after confirma
 The backend checks ownership and only permits deleting self-addressed journal
 records. Deletion also removes its chat links, allowing those messages to be
 copied to a new note again. Deploy the updated backend to enable deletion.
+
+Saved journal pages list their linked chat messages with an **Ava sõnum** button.
+It opens the correct one-to-one conversation, scrolls to the original message,
+and highlights it. The message's book icon returns to the same journal page.
+
+The prayer page shows **hetkel palves** and opens a personal prayer history.
+Web mode reads `tools/prayer-generator/history.json`; direct-file mode uses
+`prayer/history.js`, refreshed automatically by prayer generation or by running
+`python3 tools/prayer-generator/update_index.py`. Commit the generated index
+with history changes.
+
+Prayer weeks run Monday–Sunday in Europe/Tallinn. Their calendar is anchored to
+the lowest recorded week: a Saturday/Sunday generation date prepares the next
+Monday; a weekday date belongs to its Monday. Later week numbers advance by
+seven days, so early generation does not shift a prayer week. Future weeks are
+omitted; the current week shows only the user's outgoing assignment. Earlier
+weeks also show who prayed for that user. Only weeks recorded in history.json
+can appear; older PDFs without history records do not invent assignments.
