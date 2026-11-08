@@ -54,6 +54,11 @@ def validate_config(config):
         if folder in (".", "..") or folder.casefold() in folders:
             raise ValueError("Names must have unique first names for the website's PDF folders.")
         folders.add(folder.casefold())
+    paused = config.get('paused', [])
+    if not isinstance(paused, list) or any(not isinstance(name, str) or name not in names for name in paused) or len(set(paused)) != len(paused):
+        raise ValueError('paused must be a list of unique full names from names.')
+    if len(names) - len(paused) < 2:
+        raise ValueError('At least two people must remain active so everyone can be prayed for without self-assignments.')
     return week, names
 
 
@@ -65,14 +70,103 @@ def new_cycle(start, names, rng):
     return {"start_week": start, "names": list(names), "order": order, "offsets": offsets}
 
 
-def plan_week(history, week, names, today=None, rng=None):
-    """Reuse saved weeks; new rosters start new cycles without rewriting history."""
-    validate_config({"week": week, "names": names})
+def redistribute_paused(assignments, paused, rng, prior_loads=None, recent_helpers=None):
+    """Match freed recipients to balanced active-person slots, never to themselves."""
+    active = [name for name in assignments if name not in paused]
+    recipients = [assignments[name] for name in paused]
+    extras = {name: [] for name in active}
+    if not recipients:
+        return extras
+    minimum, remainder = divmod(len(recipients), len(active))
+    owners = active[:]
+    rng.shuffle(owners)
+    owners.sort(key=lambda owner: ((prior_loads or {}).get(owner, 0), (recent_helpers or {}).get(owner, 0)))
+    slots = [owner for owner in owners for _ in range(minimum)]
+    required = len(slots)
+    if remainder:
+        slots += owners
+    matched = {}
+    choices = list(range(len(recipients)))
+    rng.shuffle(choices)
+
+    def match(slot, visited):
+        for recipient in choices:
+            if recipient in visited or recipients[recipient] == slots[slot]:
+                continue
+            visited.add(recipient)
+            if recipient not in matched or match(matched[recipient], visited):
+                matched[recipient] = slot
+                return True
+        return False
+
+    for slot in range(len(slots)):
+        success = match(slot, set())
+        if slot < required and not success:
+            raise ValueError('Could not distribute paused assignments equally.')
+        if len(matched) == len(recipients):
+            break
+    if len(matched) != len(recipients):
+        raise ValueError('Could not distribute paused assignments without self-assignments.')
+    for recipient, slot in matched.items():
+        extras[slots[slot]].append(recipients[recipient])
+    return {owner: recipients for owner, recipients in extras.items() if recipients}
+
+
+def prayer_recipient_text(record, owner):
+    if owner in record.get('paused', []):
+        return '# oled praegu puhkusel #'
+    recipients = [record['assignments'][owner]] + record.get('extra_assignments', {}).get(owner, [])
+    return '\n'.join([recipients[0]] + [f'({name})' for name in recipients[1:]])
+
+
+def apply_pause_settings(history, record, paused, rng):
+    """Reapply pauses from the original rotation, retaining dates and main pairings."""
+    if set(record.get('paused', [])) == set(paused):
+        return record
+    base = record.get('base_assignments')
+    if base is None:
+        if not record.get('paused'):
+            base = dict(record['assignments'])
+        else:
+            cycle = next((cycle for cycle in history['cycles'] if cycle['start_week'] == record['cycle_start'] and cycle['names'] == record['names']), None)
+            if not cycle:
+                raise ValueError('Cannot restore the original rotation: its saved cycle is missing.')
+            order, offset = cycle['order'], record['offset']
+            base = {name: order[(i + offset) % len(order)] for i, name in enumerate(order)}
+    prior = [week for week in history['weeks'].values() if week['week'] < record['week']]
+    loads = {}
+    for week in prior:
+        for owner, recipients in week.get('extra_assignments', {}).items():
+            loads[owner] = loads.get(owner, 0) + len(recipients)
+    previous = max(prior, key=lambda week: week['week'], default={})
+    recent = {owner: len(recipients) for owner, recipients in previous.get('extra_assignments', {}).items()}
+    updated = {**record, 'base_assignments': dict(base), 'assignments': dict(base)}
+    if paused:
+        updated['paused'] = list(paused)
+        updated['extra_assignments'] = redistribute_paused(base, paused, rng, loads, recent)
+        for owner in paused:
+            updated['assignments'][owner] = ''
+    else:
+        updated.pop('paused', None)
+        updated.pop('extra_assignments', None)
+    return updated
+
+
+def plan_week(history, week, names, today=None, rng=None, paused=None):
+    """Keep saved rotations and dates; explicit pause changes update only this week."""
+    requested_paused = paused
+    paused = list(paused or [])
+    validate_config({"week": week, "names": names, "paused": paused})
     if history.get("version") != 1:
         raise ValueError("Unsupported history version; do not delete existing history.")
     key = str(week)
     if key in history["weeks"]:
-        return history["weeks"][key]
+        record = history["weeks"][key]
+        effective_paused = record.get('paused', []) if requested_paused is None else paused
+        validate_config({'week': week, 'names': record['names'], 'paused': effective_paused})
+        record = apply_pause_settings(history, record, effective_paused, rng or random.SystemRandom())
+        history['weeks'][key] = record
+        return record
     if history["weeks"] and week < max(map(int, history["weeks"])):
         raise ValueError("This older week was never generated. Generate new weeks in increasing order.")
     rng = rng or random.SystemRandom()
@@ -94,6 +188,7 @@ def plan_week(history, week, names, today=None, rng=None):
         "offset": offset,
         "assignments": {name: order[(i + offset) % len(order)] for i, name in enumerate(order)},
     }
+    record = apply_pause_settings(history, record, paused, rng)
     history["weeks"][key] = record
     return record
 
@@ -144,7 +239,12 @@ def make_pdf(text, recipient=None, name_color='#FF0000'):
             if index:
                 lines.setFont('Courier-Bold', 11)
                 lines.setFillColorRGB(*color)
-                lines.textOut(recipient)
+                recipient_lines = recipient.split('\n')
+                for recipient_index, recipient_line in enumerate(recipient_lines):
+                    if recipient_index:
+                        lines.textLine('')
+                        lines.textOut(re.match(r'[ \t]*', line).group())
+                    lines.textOut(recipient_line)
                 lines.setFont('Courier', 11)
                 lines.setFillColorRGB(0, 0, 0)
             lines.textOut(part)
@@ -166,7 +266,7 @@ def generate(config_path, template_path, history_path, output):
     with locked_file(history_path.with_suffix(".lock")):
         history = json.loads(history_path.read_text(encoding="utf-8")) if history_path.exists() else {
             "version": 1, "cycles": [], "weeks": {}}
-        record = plan_week(history, week, names)
+        record = plan_week(history, week, names, paused=config.get('paused', []))
         if record["names"] != names:
             print(f"Week {week} already exists: using its saved roster and assignments.")
         existing = [Path(output) / owner.split()[0] / f"Nädal {week}.pdf"
@@ -182,7 +282,7 @@ def generate(config_path, template_path, history_path, output):
                 return False
         documents = [
             (Path(output) / owner.split()[0] / f"Nädal {week}.pdf",
-             make_pdf(render_text(template, record, owner, '[name_to_pray]'), recipient, name_color))
+             make_pdf(render_text(template, record, owner, '[name_to_pray]'), prayer_recipient_text(record, owner), name_color))
             for owner, recipient in record["assignments"].items()
         ]
         # Save the draw before writing outputs so interrupted runs can be repeated.

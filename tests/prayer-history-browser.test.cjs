@@ -55,6 +55,23 @@ history.weeks['32'] = { ...history.weeks['31'], week: 32, date: '2026-11-01' };
         await page.click('#prayerHistoryRetry');
         await page.waitForSelector('#prayerHistoryError.hidden', { state: 'attached' });
       }
+      const pausedHistory = structuredClone(history);
+      for (const week of ['30', '31']) Object.assign(pausedHistory.weeks[week], {
+        assignments: { 'Leo Kask': 'Linnea Süvari', 'Linnea Süvari': '', 'Ott Rahuvarm': 'Leo Kask' },
+        paused: ['Linnea Süvari'], extra_assignments: { 'Leo Kask': ['Ott Rahuvarm'] }
+      });
+      await page.evaluate(async data => { prayerHistoryPromise = Promise.resolve(data); await renderPrayerHistory(); }, pausedHistory);
+      assert.equal(await page.locator('#currentPrayerName').textContent(), 'Linnea Süvari');
+      assert.equal(await page.locator('#currentPrayerExtras strong').textContent(), 'Ott Rahuvarm');
+      await page.evaluate(() => document.querySelector('#currentPrayerExtras details').open = true);
+      assert.match(await page.locator('#currentPrayerExtras details').textContent(), /kiire aeg/);
+      assert.equal(await page.locator('.prayer-history-week.current .prayer-extra-field strong').textContent(), 'Ott Rahuvarm');
+      await page.evaluate(async () => { appState.currentUser.name = 'Linnea'; await renderPrayerHistory(); });
+      assert.match(await page.locator('#currentPrayerName').textContent(), /puhka rahulikult/);
+      assert.equal(await page.locator('#currentPrayerExtras').getAttribute('class').then(value => value.includes('hidden')), true);
+      assert.match(await page.locator('.prayer-history-week').filter({ hasText: 'Nädal 30' }).textContent(), /olid sellel nädalal pausil/);
+      assert.equal(await page.locator('.prayer-history-week').filter({ hasText: 'Nädal 30' }).locator('strong').textContent(), 'Leo Kask');
+      assert.equal(await page.locator('.prayer-history-week.current .prayer-history-label').count(), 0);
       await page.click('#prayerHistoryBack');
       assert.equal(await page.locator('#view-prayers').isVisible(), true);
       assert.deepEqual(errors, []);

@@ -32,9 +32,10 @@ function prayerHistoryRows(history, userName, now = new Date()) {
         if (!owner) return [];
         const end = start + 6 * PRAYER_DAY_MS;
         const current = today <= end;
-        const row = { week: record.week, start, end, current, prayingFor: assignments[owner] };
+        const paused = (record.paused || []).includes(owner);
+        const row = { week: record.week, start, end, current, paused, prayingFor: paused ? '' : assignments[owner], extraPrayingFor: paused ? [] : (record.extra_assignments?.[owner] || []) };
         // Never include the incoming assignment in the current week's view model.
-        if (!current) row.prayedForBy = names.find(candidate => assignments[candidate] === owner) || '';
+        if (!current) row.prayedForBy = names.find(candidate => !(record.paused || []).includes(candidate) && (assignments[candidate] === owner || (record.extra_assignments?.[candidate] || []).includes(owner))) || '';
         return [row];
     }).reverse();
 }
@@ -65,6 +66,20 @@ function prayerWeekRange(row) {
     return `${date(row.start)} – ${date(row.end)}`;
 }
 
+function prayerExtraField(names, current = true) {
+    const field = chatText('div', 'prayer-extra-field', '');
+    const heading = chatText('div', 'prayer-extra-heading', '');
+    heading.append(chatText('span', 'prayer-history-label', current ? 'palun palveta ka tema eest' : 'Palvetasid ka tema eest'));
+    const info = chatText('details', 'prayer-extra-info', '');
+    const toggle = chatText('summary', '', 'ⓘ');
+    toggle.setAttribute('aria-label', 'Miks on mul lisapalvesoov?');
+    info.append(toggle, chatText('p', '', 'Nii aitad sõpra, kellel on praegu kiire aeg ja kes on võtnud pausi. Soovime endiselt kõigi eest palvetada.'));
+    heading.append(info);
+    field.append(heading);
+    names.forEach(name => field.append(chatText('strong', '', name)));
+    return field;
+}
+
 async function renderPrayerHistory() {
     const button = document.getElementById('currentPrayer');
     const list = document.getElementById('prayerHistoryList');
@@ -77,7 +92,12 @@ async function renderPrayerHistory() {
         if (version !== prayerHistoryViewVersion || appState.currentUser?.name !== name || appState.sessionToken !== token) return;
         const rows = prayerHistoryRows(history, name);
         const current = rows.find(row => row.current);
-        document.getElementById('currentPrayerName').textContent = current?.prayingFor || 'Selle nädala määrang puudub';
+        document.getElementById('currentPrayerName').textContent = current?.paused ? 'puhka rahulikult, see nädal sa kellegi eest palvetama ei pea' : current?.prayingFor || 'Selle nädala määrang puudub';
+        button.classList.toggle('paused', Boolean(current?.paused));
+        const extra = document.getElementById('currentPrayerExtras');
+        extra.replaceChildren();
+        extra.classList.toggle('hidden', !current?.extraPrayingFor?.length);
+        if (current?.extraPrayingFor?.length) extra.append(prayerExtraField(current.extraPrayingFor));
         document.getElementById('prayerHistoryError').classList.add('hidden');
         list.replaceChildren();
         if (!rows.length) list.append(chatText('p', 'prayer-history-empty', 'Sinu palveajalugu on veel tühi.'));
@@ -86,13 +106,15 @@ async function renderPrayerHistory() {
             card.classList.toggle('current', row.current);
             card.append(chatText('h3', '', `Nädal ${row.week}${row.current ? ' · hetkel palves' : ''}`), chatText('p', 'prayer-week-dates', prayerWeekRange(row)));
             const outgoing = chatText('p', '', '');
-            outgoing.append(chatText('span', 'prayer-history-label', row.current ? 'Palvetad tema eest' : 'Palvetasid tema eest'), chatText('strong', '', row.prayingFor || '—'));
+            if (row.paused) outgoing.append(chatText('span', 'prayer-paused-message', row.current ? 'puhka rahulikult, see nädal sa kellegi eest palvetama ei pea' : 'olid sellel nädalal pausil'));
+            else outgoing.append(chatText('span', 'prayer-history-label', row.current ? 'Palvetad tema eest' : 'Palvetasid tema eest'), chatText('strong', '', row.prayingFor || '—'));
             card.append(outgoing);
             if (!row.current) {
                 const incoming = chatText('p', '', '');
                 incoming.append(chatText('span', 'prayer-history-label', 'Sinu eest palvetas'), chatText('strong', '', row.prayedForBy || '—'));
                 card.append(incoming);
             }
+            if (row.extraPrayingFor.length) card.append(prayerExtraField(row.extraPrayingFor, row.current));
             list.append(card);
         });
     } catch (_) {
@@ -105,6 +127,8 @@ async function renderPrayerHistory() {
 function clearPrayerHistoryView() {
     prayerHistoryViewVersion++;
     document.getElementById('prayerHistoryList')?.replaceChildren();
+    document.getElementById('currentPrayerExtras')?.replaceChildren();
+    document.getElementById('currentPrayerExtras')?.classList.add('hidden');
     const name = document.getElementById('currentPrayerName');
     if (name) name.textContent = 'Laadin…';
 }

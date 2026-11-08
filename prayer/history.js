@@ -256,6 +256,59 @@ window.BJK_PRAYER_HISTORY = {
         "Katariina Petermann": "Kristofer Petermann",
         "Linnea S\u00fcvari": "Eliisabet Toodo"
       }
+    },
+    "33": {
+      "week": 33,
+      "date": "2026-11-07",
+      "names": [
+        "Anett Marvet",
+        "Eliisabet Toodo",
+        "Katariina Petermann",
+        "Karolina Louise Schultz",
+        "Linnea S\u00fcvari",
+        "Markus Martin",
+        "Stefan Carl Seppel",
+        "Paul Kask",
+        "Leo Kask",
+        "Ott Rahuvarm",
+        "Kristofer Petermann"
+      ],
+      "cycle_start": 25,
+      "offset": 10,
+      "assignments": {
+        "Kristofer Petermann": "Linnea S\u00fcvari",
+        "Eliisabet Toodo": "Kristofer Petermann",
+        "Karolina Louise Schultz": "Eliisabet Toodo",
+        "Markus Martin": "Karolina Louise Schultz",
+        "Paul Kask": "Markus Martin",
+        "Anett Marvet": "Paul Kask",
+        "Stefan Carl Seppel": "Anett Marvet",
+        "Leo Kask": "Stefan Carl Seppel",
+        "Ott Rahuvarm": "Leo Kask",
+        "Katariina Petermann": "Ott Rahuvarm",
+        "Linnea S\u00fcvari": ""
+      },
+      "paused": [
+        "Linnea S\u00fcvari"
+      ],
+      "extra_assignments": {
+        "Markus Martin": [
+          "Katariina Petermann"
+        ]
+      },
+      "base_assignments": {
+        "Kristofer Petermann": "Linnea S\u00fcvari",
+        "Eliisabet Toodo": "Kristofer Petermann",
+        "Karolina Louise Schultz": "Eliisabet Toodo",
+        "Markus Martin": "Karolina Louise Schultz",
+        "Paul Kask": "Markus Martin",
+        "Anett Marvet": "Paul Kask",
+        "Stefan Carl Seppel": "Anett Marvet",
+        "Leo Kask": "Stefan Carl Seppel",
+        "Ott Rahuvarm": "Leo Kask",
+        "Katariina Petermann": "Ott Rahuvarm",
+        "Linnea S\u00fcvari": "Katariina Petermann"
+      }
     }
   }
 };

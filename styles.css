@@ -294,3 +294,15 @@ body:has(#appScreen.hidden) .site-footer { padding-bottom: 24px; }
 .prayer-history-week.current > p:not(.prayer-week-dates) { grid-column: 1 / -1; }
 
 #view-prayers > .section-heading { margin-bottom: 0; padding-bottom: 12px; }
+
+.current-prayer.paused strong { font-size: 16px; line-height: 1.5; }
+.current-prayer-extras { margin: 0 0 18px; }
+.prayer-extra-field { grid-column: 1 / -1; margin-top: 14px; min-width: 0; }
+.prayer-extra-heading { display: flex; align-items: flex-start; gap: 8px; }
+.prayer-extra-heading .prayer-history-label { margin-top: 8px; }
+.prayer-extra-field strong { display: block; font-size: 20px; font-weight: normal; overflow-wrap: anywhere; }
+.prayer-extra-info { font: 12px/1.5 system-ui, sans-serif; color: var(--muted); max-width: 480px; }
+.prayer-extra-info summary { display: grid; place-items: center; width: 32px; height: 32px; cursor: pointer; font-size: 19px; list-style: none; }
+.prayer-extra-info summary::-webkit-details-marker { display: none; }
+.prayer-extra-info p { margin: 4px 0 8px; }
+.prayer-paused-message { font-size: 16px; line-height: 1.5; }

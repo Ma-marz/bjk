@@ -48,3 +48,20 @@ test('direct-file history is kept synchronized with history.json', () => {
   vm.runInContext(fs.readFileSync('prayer/history.js', 'utf8'), ctx);
   assert.deepEqual(JSON.parse(JSON.stringify(ctx.window.BJK_PRAYER_HISTORY.weeks)), actual.weeks);
 });
+
+test('paused people have no outgoing assignments but incoming history includes redistributed prayers', () => {
+  const data = { weeks: {
+    1: { week: 1, date: '2026-01-05', assignments: { 'Leo Kask': 'Linnea Süvari', 'Linnea Süvari': '', 'Ott Rahuvarm': 'Leo Kask' }, paused: ['Linnea Süvari'], extra_assignments: { 'Leo Kask': ['Ott Rahuvarm'] } },
+    2: { week: 2, date: '2026-01-12', assignments: { 'Leo Kask': 'Linnea Süvari', 'Linnea Süvari': '', 'Ott Rahuvarm': 'Leo Kask' }, paused: ['Linnea Süvari'], extra_assignments: { 'Leo Kask': ['Ott Rahuvarm'] } }
+  } };
+  const now = new Date('2026-01-13');
+  const paused = c.prayerHistoryRows(data, 'Linnea', now);
+  assert.equal(paused[0].paused, true);
+  assert.equal(paused[0].prayingFor, '');
+  assert.equal(Object.hasOwn(paused[0], 'prayedForBy'), false);
+  assert.equal(paused[1].prayedForBy, 'Leo Kask');
+  const helper = c.prayerHistoryRows(data, 'Leo', now);
+  assert.deepEqual(Array.from(helper[0].extraPrayingFor), ['Ott Rahuvarm']);
+  assert.equal(helper[0].prayingFor, 'Linnea Süvari');
+  assert.equal(c.prayerHistoryRows(data, 'Ott', now)[1].prayedForBy, 'Leo Kask');
+});

@@ -1,6 +1,7 @@
 {
   "google_sheet_endpoint": "https://script.google.com/macros/s/AKfycbx_fInwDg4lOjfcJbqs5Ls_vp37lDqZuRVJBfuMd47kMC6S5BNnivQFn_Q413Aj_c-D/exec",
-  "week": 32,
+  "week": 33,
+  "paused": ["Linnea Süvari"],
   "name_color": "#c85612",
   "names": [
     "Anett Marvet",

@@ -87,3 +87,34 @@ python3 tools/prayer-generator/update_index.py
 ```
 
 The index supports gaps in week numbers and works over HTTP and direct file access.
+
+Pause someone by adding their full name to `paused` in the same `config.json`:
+
+```json
+"paused": ["Linnea Süvari"]
+```
+
+Use `[]` to resume everyone. Keep paused people in `names`: they still receive
+prayer. At least two people must remain active. Active people keep their main
+rotation assignment; the paused people's recipients are shared randomly among
+the active people, without self-assignments. Total workloads differ by at most
+one. Pause settings and extra assignments are saved with each week in history.
+Regenerating a saved week applies the updated `paused` list while preserving
+its original date and main rotation. Resuming someone restores their original
+recipient. If pause settings have not changed, the saved extras stay unchanged.
+The existing PDF overwrite confirmation still applies.
+
+Extra assignments favor active people who have received fewer extras in earlier
+weeks. Among ties, someone who did not help in the previous recorded week is
+preferred, with remaining ties chosen randomly. This rotates the helping load
+when possible, while keeping each week's total assignments balanced and avoiding
+self-assignments. The week being regenerated and any future weeks do not count
+toward that fairness calculation. Updating an older week does not rewrite later
+saved weeks.
+
+For multiple recipients, `[name_to_pray]` prints the main recipient normally,
+then each extra recipient on its own line in parentheses. A paused person's recipient area reads
+`# oled praegu puhkusel #`. Their own name in the greeting stays unchanged.
+The website uses that week's saved pause settings and shows the main recipient
+plus a “palun palveta ka tema eest” field with extra recipients. Paused users
+still see who prayed for them once the week has ended.
