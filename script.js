@@ -1235,7 +1235,10 @@ async function loadPrayerActivities() {
             icon.innerHTML = prayerActivityIcon(user.prayerActivity);
             const text = document.createElement('span');
             const option = prayerActivityOptions.find(option => option[0] === user.prayerActivity);
-            text.textContent = `${user.name} — ${option ? option[2] : 'Veel valimata'}`;
+            text.textContent = user.name;
+            icon.title = option ? option[2] : 'Veel valimata';
+            icon.setAttribute('role', 'img');
+            icon.setAttribute('aria-label', icon.title);
             row.append(icon, text);
             return row;
         }));
@@ -1248,9 +1251,9 @@ async function savePrayerActivity(event) {
     const choice = document.querySelector('input[name="prayerActivity"]:checked');
     if (!choice || !appState.currentUser) return;
     const token = appState.sessionToken;
-    const button = document.getElementById('prayerActivitySave');
-    button.disabled = true;
-    hideMessage('prayerActivityMessage');
+    const fieldset = document.querySelector('#prayerActivityForm fieldset');
+    fieldset.disabled = true;
+    showMessage('prayerActivityMessage', 'Salvestan…', 'info');
     try {
         const result = await callAppsScript('setPrayerActivity', { prayerActivity: choice.value });
         if (token !== appState.sessionToken) return;
@@ -1261,8 +1264,11 @@ async function savePrayerActivity(event) {
         showMessage('prayerActivityMessage', 'Palvepatarei salvestatud.', 'success');
         loadPrayerActivities();
     } catch (_) {
-        if (token === appState.sessionToken) showMessage('prayerActivityMessage', 'Salvestamine ebaõnnestus. Proovi uuesti.', 'error');
-    } finally { button.disabled = false; }
+        if (token === appState.sessionToken) {
+            renderSettings();
+            showMessage('prayerActivityMessage', 'Salvestamine ebaõnnestus. Vali soovitud valik uuesti.', 'error');
+        }
+    } finally { fieldset.disabled = false; }
 }
 
 function renderSettings() {
@@ -1768,7 +1774,7 @@ function setUpEventBindings() {
     document.getElementById('logoutButton')?.addEventListener('click', handleLogout);
     document.getElementById('messageForm')?.addEventListener('submit', handleMessageSubmit);
     document.getElementById('prayerActivityHeader')?.addEventListener('click', () => showView('settings'));
-    document.getElementById('prayerActivityForm')?.addEventListener('submit', savePrayerActivity);
+    document.getElementById('prayerActivityForm')?.addEventListener('change', savePrayerActivity);
     document.getElementById('prayerActivityRefresh')?.addEventListener('click', loadPrayerActivities);
     document.getElementById('passwordForm')?.addEventListener('submit', handlePasswordChange);
     document.querySelectorAll('.nav-button').forEach((button) => {
