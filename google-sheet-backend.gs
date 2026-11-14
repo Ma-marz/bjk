@@ -1,6 +1,6 @@
 const SPREADSHEET_ID = '1j3LdQi-44YuYJhzPus7r7C52669Br7bpke4mzu7-XIg';
 const SHEET_SCHEMAS = {
-  Users: ['id', 'name', 'passwordHash', 'active', 'role', 'image', 'createdAt', 'updatedAt'],
+  Users: ['id', 'name', 'passwordHash', 'active', 'role', 'image', 'createdAt', 'updatedAt', 'prayerActivity'],
   Messages: ['id', 'senderId', 'receiverId', 'message', 'createdAt', 'sourceMessageIds'],
   ChatReads: ['id', 'userId', 'peerId', 'lastReadAt'],
   Scores: ['id', 'userId', 'game', 'bestScore', 'updatedAt'],
@@ -133,6 +133,7 @@ function toSafeUser(user) {
     name: user.name || '',
     active: user.active !== false,
     role: user.role || 'user',
+    prayerActivity: ['fuego', 'steady', 'paused'].includes(user.prayerActivity) ? user.prayerActivity : '',
     image: user.image || '',
     createdAt: user.createdAt || '',
     updatedAt: user.updatedAt || ''
@@ -216,7 +217,11 @@ function validateSession(token) {
 }
 
 function getUsersList() {
-  return getSheetRows('Users').map((user) => toSafeUser(user));
+  return getSheetRows('Users').map((user) => {
+    const safe = toSafeUser(user);
+    delete safe.prayerActivity;
+    return safe;
+  });
 }
 
 function getUserByToken(token) {
@@ -631,6 +636,21 @@ function doPost(e) {
         return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Authentication required.' })).setMimeType(ContentService.MimeType.JSON);
       }
       return ContentService.createTextOutput(JSON.stringify({ success: true, data: { users: getUsersList() } })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'setPrayerActivity' || action === 'getPrayerActivities') {
+      const user = validateSession(token);
+      if (!user) return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Authentication required.' })).setMimeType(ContentService.MimeType.JSON);
+      let result;
+      if (action === 'getPrayerActivities') {
+        if (user.role !== 'admin') result = { success: false, error: 'Admin access required.' };
+        else result = { success: true, data: { users: getSheetRows('Users').map(row => ({ id: row.id, name: row.name, prayerActivity: toSafeUser(row).prayerActivity })) } };
+      } else if (!['fuego', 'steady', 'paused'].includes(body.prayerActivity)) {
+        result = { success: false, error: 'Invalid prayer activity.' };
+      } else {
+        result = callWithLock('setPrayerActivity', () => ({ success: true, data: { user: toSafeUser(updateUserRecord(user.id, { prayerActivity: body.prayerActivity })) } }));
+      }
+      return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
     }
 
     if (action === 'changePassword') {

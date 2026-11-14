@@ -7,12 +7,15 @@
     <link rel="icon" href="img/paadike_cover.png" type="image/x-icon">
     <link rel="stylesheet" href="game/game-styles.css?v=3669309f2662">
     <link rel="stylesheet" href="games/memory/memory.css?v=02d14c447503">
-    <link rel="stylesheet" href="styles.css?v=7541b637661c">
+    <link rel="stylesheet" href="styles.css?v=8d08a8de0ebb">
     <link rel="stylesheet" href="games/flappy/flappy.css?v=3c0dbc89f1e8">
     <title>BjK</title>
 </head>
 <body>
     <svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+        <symbol id="icon-fire" viewBox="0 0 32 32"><path d="M17 3c2 7-6 8-3 14 2-1 4-4 4-7 6 5 9 9 7 14-3 8-18 7-19-2-1-6 4-10 6-13-1 6 1 7 2 7"/><path d="M16 21c-5 5-3 8 1 8s6-4-1-8Z"/></symbol>
+        <symbol id="icon-smile" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12"/><path d="M10 19c3 5 9 5 12 0M11 12v1m10-1v1"/></symbol>
+        <symbol id="icon-sleep" viewBox="0 0 32 32"><path d="M21 5A12 12 0 1 0 27 23 11 11 0 0 1 21 5ZM23 7h5l-5 6h5M13 3h4l-4 5h4"/></symbol>
         <symbol id="icon-compass" viewBox="0 0 32 32"><circle cx="16" cy="16" r="13"/><path d="m22 10-4 8-8 4 4-8Z"/><path d="M16 1v4m15 11h-4M16 31v-4M1 16h4"/></symbol>
         <symbol id="icon-book" viewBox="0 0 32 32"><path d="M16 8C12 4 5 5 3 6v20c5-2 9-1 13 2 4-3 8-4 13-2V6c-2-1-9-2-13 2Zm0 0v20M7 11l5 1m-5 5 5 1m8-6 5-1m-5 7 5-1"/></symbol>
         <symbol id="icon-letter" viewBox="0 0 32 32"><rect x="3" y="6" width="26" height="20" rx="1"/><path d="m3 7 13 11L29 7M3 26l9-10m17 10-9-10"/></symbol>
@@ -26,6 +29,7 @@
             </div>
             <div class="topbar-actions">
                 <span id="sessionBadge" class="session-badge hidden"></span>
+                <button id="prayerActivityHeader" type="button" class="prayer-activity-header hidden" aria-label="Minu palvepatarei — ava seaded"></button>
                 <button id="logoutButton" class="ghost-button hidden" type="button">Logi välja</button>
             </div>
         </header>
@@ -244,7 +248,19 @@
 
                 <div id="view-settings" class="view-panel hidden">
                     <div class="section-heading">
-                        <div><span class="eyebrow">Sinu konto</span><h2>Seaded</h2><p>Hetkel siin suurt midagi seadistada ei saagi, aga äkki ühel päeval avaneb võimalus...</p></div><svg class="heading-compass icon" aria-hidden="true"><use href="#icon-compass"/></svg>
+                        <div><span class="eyebrow">Sinu konto</span><h2>Seaded</h2></div><svg class="heading-compass icon" aria-hidden="true"><use href="#icon-compass"/></svg>
+                    </div>
+                    <div class="settings-card prayer-battery">
+                        <form id="prayerActivityForm">
+                            <fieldset><legend>Minu palvepatarei:</legend><div id="prayerActivityChoices"></div></fieldset>
+                            <button type="submit" class="primary-button" id="prayerActivitySave">Salvesta</button>
+                        </form>
+                        <p id="prayerActivityMessage" class="message hidden" role="status"></p>
+                    </div>
+                    <div id="prayerActivityAdmin" class="settings-card hidden">
+                        <h3>Sõprade palvepatareid</h3>
+                        <div id="prayerActivityList"></div>
+                        <button id="prayerActivityRefresh" type="button" class="ghost-button">Värskenda</button>
                     </div>
                     <div class="settings-card">
                         <h3>Parooli vahetamine</h3>
@@ -275,13 +291,13 @@
     </dialog>
     <script id="fileEndpointConfig">
         // Generated from tools/prayer-generator/config.json by sync_config.py.
-        window.BJK_FILE_ENDPOINT = "https://script.google.com/macros/s/AKfycbx_fInwDg4lOjfcJbqs5Ls_vp37lDqZuRVJBfuMd47kMC6S5BNnivQFn_Q413Aj_c-D/exec";
+        window.BJK_FILE_ENDPOINT = "https://script.google.com/macros/s/AKfycbzFyXWRqD4bCuklleJ3aI0JLvnnlvhn8BqQVR6CUiy6GczQowc4aAmk8H0_18H7d3zI/exec";
     </script>
     <script src="prayer/available-weeks.js?v=45493944019f"></script>
     <script src="prayer/history.js?v=7c992375928d"></script>
     <script src="prayer/history-ui.js?v=ba8f7dfc9bff"></script>
     <script src="games/security.js?v=2590702e91cb"></script>
-    <script src="script.js?v=047515ec5227"></script>
+    <script src="script.js?v=04a9d24a7236"></script>
     <script src="games/memory/memory.js?v=8e1841cf75bf"></script>
     <script src="games/flappy/engine.js?v=d2373cdb83ac"></script>
     <script src="games/flappy/flappy.js?v=4e3d331d952f"></script>

@@ -60,6 +60,7 @@ function persistState() {
             name: appState.currentUser.name,
             role: appState.currentUser.role,
             active: appState.currentUser.active,
+            prayerActivity: appState.currentUser.prayerActivity,
             image: appState.currentUser.image,
             bestScore: Number(appState.currentUser.bestScore || 0)
         } : null
@@ -151,6 +152,7 @@ function safeUser(user) {
         name: user.name || '',
         active: user.active !== false,
         role: user.role || 'user',
+        prayerActivity: user.prayerActivity || '',
         image: user.image || '',
         bestScore: Number(user.bestScore || 0)
     };
@@ -341,6 +343,7 @@ function showView(viewName) {
         panel.classList.toggle('hidden', !shouldShow);
         panel.classList.toggle('active', shouldShow);
     });
+    if (viewName === 'settings') { renderSettings(); loadPrayerActivities(); }
     if (viewName === 'prayer-history') renderPrayerHistory();
     if (changed && viewName === 'journal') { renderJournal(); refreshChatMessages(); }
     if (changed && viewName === 'messages') {
@@ -1206,7 +1209,76 @@ function renderLeaderboard() {
         .join('');
 }
 
+const prayerActivityOptions = [
+    ['fuego', 'fire', 'Full FUEGO ja olen valmis vajadusel rohkem kui ühe sõbra eest korraga palvetama'],
+    ['steady', 'smile', 'Hea meelega palvetan aga lisakoormust ei võtaks'],
+    ['paused', 'sleep', 'Mul oleks praegu pausi vaja... aga tänks, et mind endiselt palves kannate']
+];
+function prayerActivityIcon(value) {
+    const option = prayerActivityOptions.find(option => option[0] === value);
+    return option ? `<svg class="icon" aria-hidden="true"><use href="#icon-${option[1]}"/></svg>` : '<span aria-hidden="true">?</span>';
+}
+async function loadPrayerActivities() {
+    if (appState.currentUser?.role !== 'admin') return;
+    const token = appState.sessionToken;
+    const list = document.getElementById('prayerActivityList');
+    if (!list) return;
+    list.textContent = 'Laadin…';
+    try {
+        const result = await callAppsScript('getPrayerActivities');
+        if (token !== appState.sessionToken) return;
+        if (!result?.success) throw new Error(result?.error);
+        list.replaceChildren(...result.data.users.map(user => {
+            const row = document.createElement('div');
+            row.className = 'prayer-activity-row';
+            const icon = document.createElement('span');
+            icon.innerHTML = prayerActivityIcon(user.prayerActivity);
+            const text = document.createElement('span');
+            const option = prayerActivityOptions.find(option => option[0] === user.prayerActivity);
+            text.textContent = `${user.name} — ${option ? option[2] : 'Veel valimata'}`;
+            row.append(icon, text);
+            return row;
+        }));
+    } catch (_) {
+        if (token === appState.sessionToken) list.textContent = 'Palvepatareide laadimine ebaõnnestus. Proovi uuesti.';
+    }
+}
+async function savePrayerActivity(event) {
+    event.preventDefault();
+    const choice = document.querySelector('input[name="prayerActivity"]:checked');
+    if (!choice || !appState.currentUser) return;
+    const token = appState.sessionToken;
+    const button = document.getElementById('prayerActivitySave');
+    button.disabled = true;
+    hideMessage('prayerActivityMessage');
+    try {
+        const result = await callAppsScript('setPrayerActivity', { prayerActivity: choice.value });
+        if (token !== appState.sessionToken) return;
+        if (!result?.success) throw new Error(result?.error);
+        setSessionState(token, safeUser(result.data.user));
+        persistState();
+        renderSettings();
+        showMessage('prayerActivityMessage', 'Palvepatarei salvestatud.', 'success');
+        loadPrayerActivities();
+    } catch (_) {
+        if (token === appState.sessionToken) showMessage('prayerActivityMessage', 'Salvestamine ebaõnnestus. Proovi uuesti.', 'error');
+    } finally { button.disabled = false; }
+}
+
 function renderSettings() {
+    const user = appState.currentUser;
+    const header = document.getElementById('prayerActivityHeader');
+    if (header) {
+        header.classList.toggle('hidden', !user);
+        header.innerHTML = prayerActivityIcon(user?.prayerActivity);
+        const option = prayerActivityOptions.find(option => option[0] === user?.prayerActivity);
+        header.title = option ? option[2] : 'Vali oma palvepatarei';
+        header.setAttribute('aria-label', `${header.title} — ava seaded`);
+    }
+    const choices = document.getElementById('prayerActivityChoices');
+    if (choices) choices.innerHTML = prayerActivityOptions.map(([value, icon, label]) =>
+        `<label class="prayer-activity-choice"><input type="radio" name="prayerActivity" value="${value}" required ${user?.prayerActivity === value ? 'checked' : ''}>${prayerActivityIcon(value)}<span>${label}</span></label>`).join('');
+    document.getElementById('prayerActivityAdmin')?.classList.toggle('hidden', user?.role !== 'admin');
     const sessionBadge = document.getElementById('sessionBadge');
     if (sessionBadge && appState.currentUser) {
         sessionBadge.textContent = appState.currentUser.name;
@@ -1220,6 +1292,8 @@ function renderAuthenticatedState() {
         document.getElementById('loginScreen')?.classList.remove('hidden');
         document.getElementById('appScreen')?.classList.add('hidden');
         document.getElementById('logoutButton')?.classList.add('hidden');
+        document.getElementById('prayerActivityHeader')?.classList.add('hidden');
+        document.getElementById('prayerActivityList')?.replaceChildren();
         window.bjkCurrentUserName = '';
         return;
     }
@@ -1460,6 +1534,8 @@ async function handlePasswordChange(event) {
 }
 
 const requestLabels = {
+    setPrayerActivity: ['settings', 'Palvepatareid salvestatakse…'],
+    getPrayerActivities: ['settings', 'Palvepatareisid laetakse…'],
     deleteJournalEntry: ['journal', 'Märget kustutatakse…'],
     addJournalEntry: ['journal', 'Märget salvestatakse…'],
     editJournalEntry: ['journal', 'Muudatusi salvestatakse…'],
@@ -1691,6 +1767,9 @@ function setUpEventBindings() {
     document.getElementById('loginForm')?.addEventListener('submit', handleLogin);
     document.getElementById('logoutButton')?.addEventListener('click', handleLogout);
     document.getElementById('messageForm')?.addEventListener('submit', handleMessageSubmit);
+    document.getElementById('prayerActivityHeader')?.addEventListener('click', () => showView('settings'));
+    document.getElementById('prayerActivityForm')?.addEventListener('submit', savePrayerActivity);
+    document.getElementById('prayerActivityRefresh')?.addEventListener('click', loadPrayerActivities);
     document.getElementById('passwordForm')?.addEventListener('submit', handlePasswordChange);
     document.querySelectorAll('.nav-button').forEach((button) => {
         button.addEventListener('click', () => showView(button.dataset.view));

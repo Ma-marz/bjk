@@ -306,3 +306,14 @@ body:has(#appScreen.hidden) .site-footer { padding-bottom: 24px; }
 .prayer-extra-info summary::-webkit-details-marker { display: none; }
 .prayer-extra-info p { margin: 4px 0 8px; }
 .prayer-paused-message { font-size: 16px; line-height: 1.5; }
+
+.prayer-activity-header { display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid var(--border); color: var(--ink); border-radius: 50%; width: 36px; height: 36px; padding: 5px; flex-shrink: 0; }
+.prayer-activity-header .icon { width: 25px; height: 25px; }
+#view-settings .settings-card { margin-bottom: 20px; }
+.prayer-battery fieldset { padding: 0; margin: 0 0 18px; border: 0; min-width: 0; }
+.prayer-battery legend { font-size: 22px; margin-bottom: 12px; }
+.prayer-activity-choice { display: flex; align-items: center; gap: 12px; padding: 14px 0; margin: 0; font-size: 14px; font-weight: 400; line-height: 1.5; cursor: pointer; border-bottom: 1px solid var(--border); }
+.prayer-activity-choice input { appearance: auto; width: 18px; height: 18px; min-height: 0; margin: 0; padding: 0; flex: 0 0 18px; accent-color: var(--primary); box-shadow: none; }
+.prayer-activity-choice > span { min-width: 0; overflow-wrap: anywhere; }
+.prayer-activity-choice:has(input:checked) { color: var(--primary-dark); font-weight: bold; }
+.prayer-activity-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
