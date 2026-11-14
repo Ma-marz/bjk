@@ -1228,7 +1228,11 @@ async function loadPrayerActivities() {
         const result = await callAppsScript('getPrayerActivities');
         if (token !== appState.sessionToken) return;
         if (!result?.success) throw new Error(result?.error);
-        list.replaceChildren(...result.data.users.map(user => {
+        const activityOrder = { fuego: 0, steady: 1, paused: 2 };
+        const users = [...result.data.users].sort((a, b) =>
+            (activityOrder[a.prayerActivity] ?? 3) - (activityOrder[b.prayerActivity] ?? 3) ||
+            String(a.name).localeCompare(String(b.name), 'et', { sensitivity: 'base' }));
+        list.replaceChildren(...users.map(user => {
             const row = document.createElement('div');
             row.className = 'prayer-activity-row';
             const icon = document.createElement('span');
