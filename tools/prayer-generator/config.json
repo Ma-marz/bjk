@@ -1,7 +1,9 @@
 {
-  "google_sheet_endpoint": "https://script.google.com/macros/s/AKfycbzFyXWRqD4bCuklleJ3aI0JLvnnlvhn8BqQVR6CUiy6GczQowc4aAmk8H0_18H7d3zI/exec",
-  "week": 33,
-  "paused": ["Linnea Süvari"],
+  "google_sheet_endpoint": "https://script.google.com/macros/s/AKfycbzd75fRORSL_XEdguJGWS3Buhm1fTv26FzEmeEWI8i3oD-Dhd_jtOTBjeoNO_iuzYJ2/exec",
+  "week": 34,
+  "paused": [
+    "Linnea Süvari"
+  ],
   "name_color": "#c85612",
   "names": [
     "Anett Marvet",
@@ -15,5 +17,9 @@
     "Leo Kask",
     "Ott Rahuvarm",
     "Kristofer Petermann"
+  ],
+  "extra_volunteers": [
+    "Markus Martin",
+    "Stefan Carl Seppel"
   ]
 }

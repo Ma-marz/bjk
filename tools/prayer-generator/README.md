@@ -118,3 +118,18 @@ then each extra recipient on its own line in parentheses. A paused person's reci
 The website uses that week's saved pause settings and shows the main recipient
 plus a “palun palveta ka tema eest” field with extra recipients. Paused users
 still see who prayed for them once the week has ended.
+
+### Database activity settings
+
+Before generating PDFs, the configured Google Apps Script endpoint is queried using a dedicated read-only key. No username or password is requested.
+
+One-time setup:
+1. Run the generator. It creates a private `.generator-key` file beside config.json and stops with setup instructions.
+2. Copy the file contents into Apps Script → Project Settings → Script properties, with the name `PRAYER_GENERATOR_KEY`.
+3. Deploy the updated `google-sheet-backend.gs`, then run the generator again.
+
+The local key is ignored by Git and restricted to the current OS user. It does not expire or grant access to messages or account changes. To revoke it, replace/delete the Script property. You can supply `BJK_GENERATOR_KEY` in the environment instead of using the local file.
+
+The generator updates `paused` and `extra_volunteers` in config.json from the database. Only FUEGO users receive extra assignments; normal and unset users receive exactly one; paused users receive none. Every participant, including paused people, is still prayed for exactly once, with no self assignments. Extra assignments are balanced between FUEGO volunteers and historical extra workload is considered. If a sole FUEGO volunteer would receive themselves as an extra target, one main pairing is exchanged to preserve coverage. Regenerating a week applies changed activity settings while preserving its date and saved original rotation.
+
+Database/network/authentication failures stop generation rather than silently using stale settings. If anyone is paused and there are no FUEGO volunteers, generation stops with an explanation. Config sync happens before the existing PDF overwrite confirmation; cancelling still preserves PDFs and history. Configs without an endpoint remain available for offline tests and manual generation.

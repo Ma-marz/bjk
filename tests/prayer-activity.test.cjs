@@ -43,3 +43,15 @@ test('saved frontend identity preserves prayer activity', () => {
   vm.runInContext(source.slice(source.indexOf('function safeUser('), source.indexOf('function showMessage(')), c);
   assert.equal(c.safeUser({ id: 'b', prayerActivity: 'fuego' }).prayerActivity, 'fuego');
 });
+
+test('generator key grants only the dedicated activity export', () => {
+  const { request, c } = setup();
+  c.PropertiesService = { getScriptProperties: () => ({ getProperty: () => 'private-key' }) };
+  c.hashPassword = value => `hash:${value}`;
+  assert.equal(request('getGeneratorPrayerActivities', '', {}).success, false);
+  assert.equal(request('getGeneratorPrayerActivities', '', { generatorKey: 'wrong' }).success, false);
+  const response = request('getGeneratorPrayerActivities', '', { generatorKey: 'private-key' });
+  assert.equal(response.success, true);
+  assert.deepEqual(Object.keys(response.data.users[0]).sort(), ['name', 'prayerActivity']);
+  assert.equal(request('getPrayerActivities', '', { generatorKey: 'private-key' }).success, false);
+});

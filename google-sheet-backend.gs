@@ -589,6 +589,15 @@ function doPost(e) {
     const token = String(request.token || '');
     const body = request.payload || request;
 
+    if (action === 'getGeneratorPrayerActivities') {
+      const expected = PropertiesService.getScriptProperties().getProperty('PRAYER_GENERATOR_KEY');
+      const supplied = String(body.generatorKey || '');
+      if (!expected || !supplied || hashPassword(supplied) !== hashPassword(expected)) {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Invalid generator key. Set PRAYER_GENERATOR_KEY in Apps Script project properties and deploy the updated backend.' })).setMimeType(ContentService.MimeType.JSON);
+      }
+      return ContentService.createTextOutput(JSON.stringify({ success: true, data: { users: getSheetRows('Users').map(row => ({ name: row.name, prayerActivity: toSafeUser(row).prayerActivity })) } })).setMimeType(ContentService.MimeType.JSON);
+    }
+
     if (action === 'login') {
       const name = String(body.name || '').trim();
       const password = String(body.password || '');

@@ -9,6 +9,9 @@ from pathlib import Path
 import random
 import re
 import tempfile
+import secrets
+import ssl
+from urllib.request import Request, urlopen
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_OUTPUT = HERE.parents[1] / "prayer"
@@ -37,6 +40,55 @@ def locked_file(path):
                 fcntl.flock(lock, fcntl.LOCK_UN)
 
 
+def sync_activity_config(config_path, config):
+    """Fetch activity choices using a dedicated read-only generator key."""
+    endpoint = config.get('google_sheet_endpoint')
+    if not endpoint:
+        return config
+
+    def request(action, payload=None, token=''):
+        data = json.dumps({'action': action, 'token': token, 'payload': payload or {}}).encode()
+        import certifi
+        context = ssl.create_default_context(cafile=certifi.where())
+        with urlopen(Request(endpoint, data=data, headers={'Content-Type': 'text/plain;charset=utf-8'}), timeout=45, context=context) as response:
+            result = json.load(response)
+        if not result.get('success'):
+            if action == 'getGeneratorPrayerActivities' and result.get('error') == 'Unknown action.':
+                raise ValueError('The deployed backend is outdated. Copy google-sheet-backend.gs to Apps Script, then Deploy > Manage deployments > Edit > New version > Deploy. If you created a new deployment instead, update google_sheet_endpoint in config.json.')
+            raise ValueError(result.get('error', 'Database request failed.'))
+        return result['data']
+
+    key_path = Path(config_path).parent / '.generator-key'
+    key = os.environ.get('BJK_GENERATOR_KEY', '').strip()
+    if not key:
+        if not key_path.exists():
+            key_path.parent.mkdir(parents=True, exist_ok=True)
+            with key_path.open('x', encoding='utf-8') as stream:
+                os.chmod(key_path, 0o600)
+                stream.write(secrets.token_urlsafe(32) + '\n')
+            raise ValueError(f'Created generator key in {key_path.resolve()}. Copy its contents to the Apps Script project property PRAYER_GENERATOR_KEY, deploy the updated backend, then run again. No username or password is needed.')
+        key = key_path.read_text(encoding='utf-8').strip()
+    if not key:
+        raise ValueError('Generator key is empty.')
+    users = request('getGeneratorPrayerActivities', {'generatorKey': key})['users']
+    levels = {}
+    for name in config['names']:
+        matches = [user for user in users if user['name'].strip().casefold() == name.casefold()]
+        if not matches:
+            matches = [user for user in users if user['name'].strip().casefold() == name.split()[0].casefold()]
+        if len(matches) != 1:
+            raise ValueError(f'Cannot uniquely match database user for {name}.')
+        levels[name] = matches[0].get('prayerActivity', '')
+        if levels[name] not in ('fuego', 'steady', 'paused', ''):
+            raise ValueError(f'Invalid activity level for {name}.')
+    updated = {**config, 'paused': [name for name, level in levels.items() if level == 'paused'],
+               'extra_volunteers': [name for name, level in levels.items() if level == 'fuego']}
+    validate_config(updated)
+    atomic_write(config_path, (json.dumps(updated, ensure_ascii=False, indent=2) + '\n').encode())
+    print('Updated config from database. Unset activity levels receive one assignment and no extras.')
+    return updated
+
+
 def validate_config(config):
     week = config.get("week")
     names = config.get("names")
@@ -59,6 +111,12 @@ def validate_config(config):
         raise ValueError('paused must be a list of unique full names from names.')
     if len(names) - len(paused) < 2:
         raise ValueError('At least two people must remain active so everyone can be prayed for without self-assignments.')
+    volunteers = config.get('extra_volunteers')
+    if volunteers is not None:
+        if not isinstance(volunteers, list) or len(set(volunteers)) != len(volunteers) or any(name not in names or name in paused for name in volunteers):
+            raise ValueError('extra_volunteers must contain unique active names.')
+        if paused and not volunteers:
+            raise ValueError('Paused people require at least one FUEGO volunteer so everyone receives prayer.')
     return week, names
 
 
@@ -70,13 +128,15 @@ def new_cycle(start, names, rng):
     return {"start_week": start, "names": list(names), "order": order, "offsets": offsets}
 
 
-def redistribute_paused(assignments, paused, rng, prior_loads=None, recent_helpers=None):
+def redistribute_paused(assignments, paused, rng, prior_loads=None, recent_helpers=None, volunteers=None):
     """Match freed recipients to balanced active-person slots, never to themselves."""
-    active = [name for name in assignments if name not in paused]
+    active = [name for name in assignments if name not in paused and (volunteers is None or name in volunteers)]
     recipients = [assignments[name] for name in paused]
     extras = {name: [] for name in active}
     if not recipients:
         return extras
+    if not active:
+        raise ValueError('No FUEGO volunteers available for extra assignments.')
     minimum, remainder = divmod(len(recipients), len(active))
     owners = active[:]
     rng.shuffle(owners)
@@ -119,9 +179,9 @@ def prayer_recipient_text(record, owner):
     return '\n'.join([recipients[0]] + [f'({name})' for name in recipients[1:]])
 
 
-def apply_pause_settings(history, record, paused, rng):
+def apply_pause_settings(history, record, paused, rng, volunteers=None):
     """Reapply pauses from the original rotation, retaining dates and main pairings."""
-    if set(record.get('paused', [])) == set(paused):
+    if set(record.get('paused', [])) == set(paused) and (volunteers is None or set(record.get('extra_volunteers', [])) == set(volunteers)):
         return record
     base = record.get('base_assignments')
     if base is None:
@@ -141,9 +201,21 @@ def apply_pause_settings(history, record, paused, rng):
     previous = max(prior, key=lambda week: week['week'], default={})
     recent = {owner: len(recipients) for owner, recipients in previous.get('extra_assignments', {}).items()}
     updated = {**record, 'base_assignments': dict(base), 'assignments': dict(base)}
+    if volunteers is not None:
+        updated['extra_volunteers'] = list(volunteers)
     if paused:
+        distribution = dict(base)
+        # A sole helper cannot pray for themselves: exchange that freed target
+        # with another active person's main target, preserving full coverage.
+        if volunteers is not None and len(volunteers) == 1:
+            helper = volunteers[0]
+            donor = next((owner for owner in paused if distribution[owner] == helper), None)
+            if donor:
+                other = next(owner for owner in base if owner not in paused and owner != helper)
+                distribution[donor], distribution[other] = distribution[other], helper
+                updated['assignments'][other] = helper
         updated['paused'] = list(paused)
-        updated['extra_assignments'] = redistribute_paused(base, paused, rng, loads, recent)
+        updated['extra_assignments'] = redistribute_paused(distribution, paused, rng, loads, recent, volunteers)
         for owner in paused:
             updated['assignments'][owner] = ''
     else:
@@ -152,19 +224,19 @@ def apply_pause_settings(history, record, paused, rng):
     return updated
 
 
-def plan_week(history, week, names, today=None, rng=None, paused=None):
+def plan_week(history, week, names, today=None, rng=None, paused=None, volunteers=None):
     """Keep saved rotations and dates; explicit pause changes update only this week."""
     requested_paused = paused
     paused = list(paused or [])
-    validate_config({"week": week, "names": names, "paused": paused})
+    validate_config({"week": week, "names": names, "paused": paused, "extra_volunteers": volunteers})
     if history.get("version") != 1:
         raise ValueError("Unsupported history version; do not delete existing history.")
     key = str(week)
     if key in history["weeks"]:
         record = history["weeks"][key]
         effective_paused = record.get('paused', []) if requested_paused is None else paused
-        validate_config({'week': week, 'names': record['names'], 'paused': effective_paused})
-        record = apply_pause_settings(history, record, effective_paused, rng or random.SystemRandom())
+        validate_config({'week': week, 'names': record['names'], 'paused': effective_paused, 'extra_volunteers': volunteers})
+        record = apply_pause_settings(history, record, effective_paused, rng or random.SystemRandom(), volunteers)
         history['weeks'][key] = record
         return record
     if history["weeks"] and week < max(map(int, history["weeks"])):
@@ -188,7 +260,7 @@ def plan_week(history, week, names, today=None, rng=None, paused=None):
         "offset": offset,
         "assignments": {name: order[(i + offset) % len(order)] for i, name in enumerate(order)},
     }
-    record = apply_pause_settings(history, record, paused, rng)
+    record = apply_pause_settings(history, record, paused, rng, volunteers)
     history["weeks"][key] = record
     return record
 
@@ -256,6 +328,7 @@ def make_pdf(text, recipient=None, name_color='#FF0000'):
 
 def generate(config_path, template_path, history_path, output):
     config = json.loads(Path(config_path).read_text(encoding="utf-8"))
+    config = sync_activity_config(config_path, config)
     week, names = validate_config(config)
     name_color = config.get('name_color', '#FF0000')
     parse_name_color(name_color)
@@ -266,7 +339,7 @@ def generate(config_path, template_path, history_path, output):
     with locked_file(history_path.with_suffix(".lock")):
         history = json.loads(history_path.read_text(encoding="utf-8")) if history_path.exists() else {
             "version": 1, "cycles": [], "weeks": {}}
-        record = plan_week(history, week, names, paused=config.get('paused', []))
+        record = plan_week(history, week, names, paused=config.get('paused', []), volunteers=config.get('extra_volunteers'))
         if record["names"] != names:
             print(f"Week {week} already exists: using its saved roster and assignments.")
         existing = [Path(output) / owner.split()[0] / f"Nädal {week}.pdf"

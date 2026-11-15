@@ -36,3 +36,6 @@ coverage/
 __pycache__/
 *.pyc
 tools/prayer-generator/history.lock
+
+# Private read-only prayer generator key
+.generator-key
