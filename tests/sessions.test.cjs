@@ -263,3 +263,42 @@ test('journal deletion only removes the authenticated user’s own self-addresse
   assert.deepEqual(rows.map(row => row.id), ['other', 'chat']);
   assert.equal(remove('mine').success, false);
 });
+
+test('only the recipient can add or remove a message heart; journals cannot be liked', () => {
+  const s = server();
+  const token = s.login();
+  const messages = [
+    { id: 'incoming', senderId: 'other', receiverId: 'user-a', hearted: false },
+    { id: 'outgoing', senderId: 'user-a', receiverId: 'other' },
+    { id: 'journal', senderId: 'user-a', receiverId: 'user-a' },
+    { id: 'foreign', senderId: 'other', receiverId: 'third' }
+  ];
+  const getRows = s.c.getSheetRows;
+  s.c.getSheetRows = name => name === 'Messages' ? messages : getRows(name);
+  s.c.updateRowById = (sheet, id, updates) => Object.assign(messages.find(row => row.id === id), updates);
+  for (const id of ['outgoing', 'journal', 'foreign', 'missing']) {
+    assert.equal(s.request('setMessageHeart', { token, id, hearted: true }).success, false);
+  }
+  assert.equal(s.request('setMessageHeart', { id: 'incoming', hearted: true }).success, false);
+  assert.equal(s.request('setMessageHeart', { token, id: 'incoming', hearted: 'true' }).success, false);
+  for (const hearted of [true, true, false]) {
+    const result = s.request('setMessageHeart', { token, id: 'incoming', hearted });
+    assert.equal(result.success, true);
+    assert.equal(messages[0].hearted, hearted);
+    assert.equal(s.c.getInboxForUser('user-a').find(row => row.id === 'incoming').hearted, hearted);
+    assert.equal(s.c.getSentMessagesForUser('other').find(row => row.id === 'incoming').hearted, hearted);
+  }
+});
+
+test('heart notifications are acknowledged only by the message sender and for the observed heart', () => {
+  const s = server(); const token = s.login();
+  const messages = [{ id: 'own', senderId: 'user-a', receiverId: 'other', hearted: true, heartedAt: 'new' }, { id: 'incoming', senderId: 'other', receiverId: 'user-a', hearted: true, heartedAt: 'new' }];
+  const getRows = s.c.getSheetRows;
+  s.c.getSheetRows = name => name === 'Messages' ? messages : getRows(name);
+  s.c.updateRowById = (_, id, updates) => Object.assign(messages.find(row => row.id === id), updates);
+  s.request('markMessageHeartsRead', { token, hearts: [{ id: 'own', heartedAt: 'old' }, { id: 'incoming', heartedAt: 'new' }] });
+  assert.equal(messages[0].heartSeenAt, undefined);
+  assert.equal(messages[1].heartSeenAt, undefined);
+  s.request('markMessageHeartsRead', { token, hearts: [{ id: 'own', heartedAt: 'new' }] });
+  assert.equal(messages[0].heartSeenAt, 'new');
+});

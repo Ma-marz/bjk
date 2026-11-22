@@ -1,7 +1,7 @@
 const SPREADSHEET_ID = '1j3LdQi-44YuYJhzPus7r7C52669Br7bpke4mzu7-XIg';
 const SHEET_SCHEMAS = {
   Users: ['id', 'name', 'passwordHash', 'active', 'role', 'image', 'createdAt', 'updatedAt', 'prayerActivity'],
-  Messages: ['id', 'senderId', 'receiverId', 'message', 'createdAt', 'sourceMessageIds'],
+  Messages: ['id', 'senderId', 'receiverId', 'message', 'createdAt', 'sourceMessageIds', 'hearted', 'heartedAt', 'heartSeenAt'],
   ChatReads: ['id', 'userId', 'peerId', 'lastReadAt'],
   Scores: ['id', 'userId', 'game', 'bestScore', 'updatedAt'],
   Sessions: ['token', 'userId', 'createdAt', 'expiresAt'],
@@ -321,6 +321,9 @@ function getInboxForUser(userId) {
       receiverId: message.receiverId,
       message: message.message,
       createdAt: message.createdAt,
+      hearted: message.hearted === true,
+      heartedAt: message.heartedAt || '',
+      heartSeenAt: message.heartSeenAt || '',
       sourceMessageIds: message.senderId === message.receiverId ? journalSources(message.sourceMessageIds) : [],
       senderName: resolveUserName(message.senderId),
       receiverName: resolveUserName(message.receiverId)
@@ -336,6 +339,9 @@ function getSentMessagesForUser(userId) {
       receiverId: message.receiverId,
       message: message.message,
       createdAt: message.createdAt,
+      hearted: message.hearted === true,
+      heartedAt: message.heartedAt || '',
+      heartSeenAt: message.heartSeenAt || '',
       sourceMessageIds: message.senderId === message.receiverId ? journalSources(message.sourceMessageIds) : [],
       senderName: resolveUserName(message.senderId),
       receiverName: resolveUserName(message.receiverId)
@@ -733,6 +739,35 @@ function doPost(e) {
       const text = String(body.message || '').trim();
       if (!text || text.length > 10000) return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Entry must contain 1–10000 characters.' })).setMimeType(ContentService.MimeType.JSON);
       const result = callWithLock('addJournalEntry', () => saveJournalRecord(user.id, text, '', body.sourceMessageIds));
+      return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'markMessageHeartsRead') {
+      const user = validateSession(token);
+      if (!user) return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Authentication required.' })).setMimeType(ContentService.MimeType.JSON);
+      const result = callWithLock('markMessageHeartsRead', () => {
+        const rows = getSheetRows('Messages');
+        const acknowledgements = Array.isArray(body.hearts) ? body.hearts.slice(0, 100) : [];
+        acknowledgements.forEach(ack => {
+          const message = rows.find(row => row.id === ack.id && row.senderId === user.id && row.receiverId !== user.id && row.hearted === true && String(row.heartedAt) === String(ack.heartedAt));
+          if (message) updateRowById('Messages', message.id, { heartSeenAt: message.heartedAt });
+        });
+        return { success: true };
+      });
+      return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'setMessageHeart') {
+      const user = validateSession(token);
+      if (!user) return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Authentication required.' })).setMimeType(ContentService.MimeType.JSON);
+      if (typeof body.hearted !== 'boolean') return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Invalid heart value.' })).setMimeType(ContentService.MimeType.JSON);
+      const result = callWithLock('setMessageHeart', () => {
+        const message = getSheetRows('Messages').find(row => row.id === String(body.id || '') && row.receiverId === user.id && row.senderId !== user.id);
+        if (!message) return { success: false, error: 'Message not found.' };
+        const heartedAt = body.hearted && message.hearted !== true ? new Date().toISOString() : (message.heartedAt || '');
+        updateRowById('Messages', message.id, { hearted: body.hearted, heartedAt });
+        return { success: true, data: { id: message.id, hearted: body.hearted } };
+      });
       return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
     }
 

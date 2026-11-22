@@ -343,6 +343,7 @@ function showView(viewName) {
         panel.classList.toggle('hidden', !shouldShow);
         panel.classList.toggle('active', shouldShow);
     });
+    if (viewName === 'messages') markVisibleHeartsRead();
     if (viewName === 'settings') { renderSettings(); loadPrayerActivities(); }
     if (viewName === 'prayer-history') renderPrayerHistory();
     if (changed && viewName === 'journal') { renderJournal(); refreshChatMessages(); }
@@ -690,6 +691,30 @@ async function markVisibleChatRead() {
     }
 }
 
+function hasUnseenMessageHeart(message) {
+    return message.senderId === appState.currentUser?.id && message.hearted === true &&
+        !!message.heartedAt && String(message.heartSeenAt || '') !== String(message.heartedAt);
+}
+let heartReadSaving = false;
+async function markVisibleHeartsRead() {
+    if (!chatIsVisible() || !appState.sessionToken || heartReadSaving) return;
+    const messages = appState.sentMessages.filter(message => message.receiverId === chatState.selectedId && hasUnseenMessageHeart(message)).slice(0, 100);
+    if (!messages.length) return;
+    const token = appState.sessionToken;
+    const hearts = messages.map(message => ({ id: message.id, heartedAt: message.heartedAt }));
+    heartReadSaving = true;
+    try {
+        const result = await performAppsScriptRequest('markMessageHeartsRead', { token, hearts });
+        if (token !== appState.sessionToken || !result?.success) return;
+        for (const ack of hearts) {
+            const message = appState.sentMessages.find(message => message.id === ack.id && message.heartedAt === ack.heartedAt);
+            if (message) message.heartSeenAt = ack.heartedAt;
+        }
+        renderMessages({ preserveScroll: true });
+    } catch (_) { /* Retry on the next refresh. */ }
+    finally { heartReadSaving = false; }
+}
+
 function createChatAvatar(person) {
     const avatar = chatText('span', 'chat-avatar', person.name.split(/\s+/).map(part => part[0]).slice(0, 2).join(''));
     avatar.setAttribute('aria-hidden', 'true');
@@ -733,6 +758,7 @@ function openConversation(id, messageId = '') {
     document.getElementById('messageText').value = chatState.drafts.get(id) || '';
     document.getElementById('chatShell').classList.add('thread-open');
     renderMessages();
+    markVisibleHeartsRead();
     markVisibleChatRead();
     refreshChatMessages();
 }
@@ -879,10 +905,50 @@ function copyMessageToJournal(message) {
     input.setSelectionRange(input.value.length, input.value.length);
 }
 
+let messageHeartSaving = false;
+const pendingMessageHearts = new Map();
+async function toggleMessageHeart() {
+    const message = journalMenuMessage;
+    const user = appState.currentUser;
+    if (!message || !user || message.receiverId !== user.id || message.senderId === user.id || messageHeartSaving) return;
+    const token = appState.sessionToken;
+    const previous = message.hearted === true;
+    const hearted = !previous;
+    const apply = value => {
+        for (const messages of [appState.inboxMessages, appState.sentMessages]) {
+            for (const entry of messages) if (entry.id === message.id) entry.hearted = value;
+        }
+    };
+    messageHeartSaving = true;
+    pendingMessageHearts.set(message.id, hearted);
+    apply(hearted);
+    document.getElementById('messageActions').close();
+    renderMessages({ preserveScroll: true });
+    try {
+        const result = await callAppsScript('setMessageHeart', { token, id: message.id, hearted });
+        if (token !== appState.sessionToken) return;
+        if (!result?.success) throw new Error(result?.error);
+        apply(result.data.hearted);
+    } catch (_) {
+        if (token === appState.sessionToken) {
+            apply(previous);
+            setActivityResult('messages', true, 'Südame salvestamine ebaõnnestus. Proovi uuesti.');
+        }
+    } finally {
+        pendingMessageHearts.delete(message.id);
+        messageHeartSaving = false;
+        if (token === appState.sessionToken) renderMessages({ preserveScroll: true });
+    }
+}
+
 function bindMessageJournalActions(bubble, message) {
     if (!message.id) return;
     const open = () => {
-        if (!bubble.isConnected || journalLinkFor(message.id)) return;
+        if (!bubble.isConnected) return;
+        const heart = document.getElementById('toggleMessageHeart');
+        heart.classList.toggle('hidden', message.receiverId !== appState.currentUser?.id || message.senderId === appState.currentUser?.id);
+        heart.textContent = message.hearted === true ? 'eemalda süda' : 'tänks, et jagasid';
+        document.getElementById('copyMessageToJournal').classList.toggle('hidden', !!journalLinkFor(message.id));
         journalMenuMessage = message;
         const dialog = document.getElementById('messageActions');
         if (!dialog.open) dialog.showModal();
@@ -1073,12 +1139,15 @@ async function saveJournalEntry(event) {
     }
 }
 
-function renderMessages() {
+function renderMessages({ preserveScroll = false } = {}) {
+    for (const messages of [appState.inboxMessages, appState.sentMessages]) {
+        for (const message of messages) if (pendingMessageHearts.has(message.id)) message.hearted = pendingMessageHearts.get(message.id);
+    }
     renderJournal();
     const list = document.getElementById('conversationList');
     if (!list) return;
     const conversations = getConversations();
-    const hasUnread = conversations.some(person => chatUnreadCount(person) > 0);
+    const hasUnread = conversations.some(person => chatUnreadCount(person) > 0 || person.messages.some(hasUnseenMessageHeart));
     const nav = document.querySelector('[data-view="messages"]');
     nav?.classList.toggle('has-unread', hasUnread);
     nav?.setAttribute('aria-label', hasUnread ? 'Sõnumid · lugemata sõnumeid' : 'Sõnumid');
@@ -1089,7 +1158,9 @@ function renderMessages() {
         button.dataset.userId = person.id;
         button.setAttribute('aria-pressed', String(person.id === chatState.selectedId));
         const unread = chatUnreadCount(person);
-        button.classList.toggle('unread', unread > 0);
+        const unseenHeart = person.messages.some(hasUnseenMessageHeart);
+        button.classList.toggle('unread', unread > 0 || unseenHeart);
+        if (unseenHeart) button.setAttribute('aria-label', `${person.name}, uus süda`);
         if (unread) button.setAttribute('aria-label', `${person.name}, ${unread} lugemata sõnumit`);
         const avatar = createChatAvatar(person);
         const info = chatText('span', 'conversation-info', '');
@@ -1098,6 +1169,11 @@ function renderMessages() {
         info.append(chatText('span', 'conversation-preview', last ? (last.senderId === appState.currentUser.id ? 'Sina: ' : '') + last.message : 'Alusta vestlust'));
         button.append(avatar, info);
         if (unread) button.append(chatText('span', 'chat-unread-badge', String(unread)));
+        else if (unseenHeart) {
+            const dot = chatText('span', 'chat-heart-dot', '');
+            dot.setAttribute('aria-label', 'Uus süda');
+            button.append(dot);
+        }
         if (last) button.append(chatText('span', 'conversation-date', chatDate(last.createdAt, false)));
         button.addEventListener('click', () => openConversation(person.id));
         list.append(button);
@@ -1117,6 +1193,7 @@ function renderMessages() {
     }
     const key = JSON.stringify([person?.id, person?.messages, chatState.unreadBoundaryId, chatState.linkedMessageId, appState.inboxMessages.filter(entry => entry.senderId === entry.receiverId), journalDraftSources]);
     if (key === chatState.renderedKey) return;
+    const previousScrollTop = log.scrollTop;
     const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
     const switched = !chatState.renderedKey;
     chatState.renderedKey = key;
@@ -1138,17 +1215,27 @@ function renderMessages() {
         bubble.dataset.messageId = message.id || '';
         bubble.classList.toggle('chat-linked-target', message.id === chatState.linkedMessageId);
         bubble.append(chatText('div', 'chat-body', message.message), chatText('small', 'chat-time', chatDate(message.createdAt, true)));
+        if (message.hearted === true) {
+            const heart = chatText('span', 'message-heart', '');
+            heart.setAttribute('role', 'img');
+            heart.setAttribute('aria-label', 'Tänks, et jagasid');
+            heart.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#icon-heart"/></svg>';
+            bubble.append(heart);
+        }
         bindMessageJournalActions(bubble, message);
         log.append(bubble);
     });
     const linkedTarget = chatState.jumpToMessageId && [...log.querySelectorAll('.chat-bubble')].find(bubble => bubble.dataset.messageId === chatState.jumpToMessageId);
-    if (linkedTarget) {
+    if (preserveScroll) {
+        log.scrollTop = previousScrollTop;
+    } else if (linkedTarget) {
         chatState.jumpToMessageId = '';
         log.scrollTop += linkedTarget.getBoundingClientRect().top - log.getBoundingClientRect().top - (log.clientHeight - linkedTarget.offsetHeight) / 2;
         linkedTarget.focus({ preventScroll: true });
     } else if (switched && unreadDivider) {
         log.scrollTop += unreadDivider.getBoundingClientRect().top - log.getBoundingClientRect().top - 12;
     } else if (switched || atBottom) log.scrollTop = log.scrollHeight;
+    else log.scrollTop = previousScrollTop;
 }
 
 function pollChatMessages() {
@@ -1179,7 +1266,8 @@ async function refreshChatMessages() {
             appState[field] = [...messages.values()].filter(message => !journalDeletedIds.has(message.id));
         });
         renderMessages();
-        markVisibleChatRead();
+        markVisibleHeartsRead();
+    markVisibleChatRead();
     } catch (_) { /* Manual refresh exposes errors and retry through the existing status UI. */ }
     finally { chatState.refreshing = false; }
 }
@@ -1544,6 +1632,7 @@ async function handlePasswordChange(event) {
 }
 
 const requestLabels = {
+    setMessageHeart: ['messages', 'Südant salvestatakse…'],
     setPrayerActivity: ['settings', 'Palvepatareid salvestatakse…'],
     getPrayerActivities: ['settings', 'Palvepatareisid laetakse…'],
     deleteJournalEntry: ['journal', 'Märget kustutatakse…'],
@@ -1568,7 +1657,7 @@ function callAppsScript(action, payload = {}, scorePermit) {
             if (action === 'getLeaderboard' && payload.game === 'bjk-memory') return window.BJKMemory?.refreshLeaderboard();
             return loadUserDependentData();
         } : undefined;
-        const finish = action === 'saveScore' ? () => {} : beginDataActivity(scope, label, retry);
+        const finish = (action === 'saveScore' || action === 'setMessageHeart') ? () => {} : beginDataActivity(scope, label, retry);
         try {
             const result = await performAppsScriptRequest(action, payload, scorePermit);
             finish(result?.success !== true);
@@ -1787,6 +1876,7 @@ function setUpEventBindings() {
 
     window.addEventListener('resize', resizeJournalEditor);
     document.getElementById('journalText')?.addEventListener('input', () => { resizeJournalEditor(); persistJournalDraft(); renderJournal(); });
+    document.getElementById('toggleMessageHeart')?.addEventListener('click', toggleMessageHeart);
     document.getElementById('copyMessageToJournal')?.addEventListener('click', () => {
         const message = journalMenuMessage;
         document.getElementById('messageActions').close();

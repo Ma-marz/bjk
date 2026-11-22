@@ -15,6 +15,11 @@ const assert = require('node:assert/strict');
       const body = route.request().postDataJSON();
       let data = {};
       if (body.action === 'login') data = { token: 'chat-test', user: users[0], users, leaderboard: [] };
+      if (body.action === 'setMessageHeart') {
+        const message = inbox.find(message => message.id === body.id);
+        if (!fail) message.hearted = body.hearted;
+        data = { id: body.id, hearted: body.hearted };
+      }
       if (body.action === 'getUsers') data = { users };
       if (body.action === 'getInbox') data = { messages: inbox, readStates: [...readStates].map(([peerId, lastReadAt]) => ({ peerId, lastReadAt })) };
       if (body.action === 'markChatRead') {
@@ -62,6 +67,20 @@ const assert = require('node:assert/strict');
     assert.equal(await page.locator('.chat-unread-divider + .chat-bubble .chat-body').textContent(), '<img src=x onerror=alert(1)>');
     assert.equal(await page.locator('.chat-body img').count(), 0);
     assert.equal(await page.locator('.outgoing').count(), 1);
+    await page.locator('.chat-bubble.outgoing').dblclick();
+    assert.equal(await page.locator('#toggleMessageHeart').isVisible(), false);
+    await page.click('#closeMessageActions');
+    const incomingHeart = page.locator('.chat-bubble[data-message-id="2"]');
+    await incomingHeart.dblclick();
+    assert.equal(await page.locator('#toggleMessageHeart').textContent(), 'tänks, et jagasid');
+    await page.click('#toggleMessageHeart');
+    await page.waitForSelector('.message-heart');
+    const placement = await incomingHeart.evaluate(bubble => ({ bubble: bubble.getBoundingClientRect().right, heart: bubble.querySelector('.message-heart').getBoundingClientRect().left }));
+    assert.ok(placement.heart >= placement.bubble, 'heart sits beside the bubble');
+    await incomingHeart.dblclick();
+    assert.equal(await page.locator('#toggleMessageHeart').textContent(), 'eemalda süda');
+    await page.click('#toggleMessageHeart');
+    await page.waitForSelector('.message-heart', { state: 'detached' });
     await page.fill('#messageText', 'Draft for Anett');
     await page.click('[data-user-id="b"]');
     assert.equal(await page.inputValue('#messageText'), '');
