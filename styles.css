@@ -334,3 +334,6 @@ body:has(#appScreen.hidden) .site-footer { padding-bottom: 24px; }
 .chat-bubble.outgoing .message-heart { left: auto; right: calc(100% + 6px); transform: rotate(9deg); }
 
 .chat-heart-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--primary); flex-shrink: 0; align-self: center; }
+
+.message-actions .journal-action-button { background: #d9bf92; color: var(--ink); border-color: #a18458; }
+.message-actions .journal-action-button:hover { background: #cdb080; }

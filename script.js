@@ -1876,6 +1876,19 @@ function setUpEventBindings() {
 
     window.addEventListener('resize', resizeJournalEditor);
     document.getElementById('journalText')?.addEventListener('input', () => { resizeJournalEditor(); persistJournalDraft(); renderJournal(); });
+    const messageActions = document.getElementById('messageActions');
+    let messageActionBackdropPress = false;
+    const outsideMessageActions = event => {
+        const rect = messageActions.getBoundingClientRect();
+        return event.target === messageActions && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom);
+    };
+    messageActions?.addEventListener('pointerdown', event => {
+        messageActionBackdropPress = outsideMessageActions(event);
+    });
+    messageActions?.addEventListener('click', event => {
+        if (messageActionBackdropPress && outsideMessageActions(event)) messageActions.close();
+        messageActionBackdropPress = false;
+    });
     document.getElementById('toggleMessageHeart')?.addEventListener('click', toggleMessageHeart);
     document.getElementById('copyMessageToJournal')?.addEventListener('click', () => {
         const message = journalMenuMessage;
