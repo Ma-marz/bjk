@@ -327,6 +327,29 @@ function hideLoading(element) {
     target.closest('form')?.querySelectorAll('button[type=submit]').forEach(button => button.disabled = false);
 }
 
+window.BJKNavigation = {
+    restoring: false,
+    record() {
+        if (this.restoring || !appState.currentUser || !window.history?.pushState) return;
+        const state = { bjkView: true, userId: appState.currentUser.id, view: appState.currentView,
+            peer: appState.currentView === 'messages' && document.getElementById('chatShell')?.classList.contains('thread-open') ? chatState.selectedId : '' };
+        const previous = window.history.state;
+        if (!previous?.bjkView || previous.userId !== state.userId) window.history.replaceState(state, '');
+        else if (previous.view !== state.view || previous.peer !== state.peer) window.history.pushState(state, '');
+    },
+    restore(state) {
+        if (!state?.bjkView || !appState.currentUser || state.userId !== appState.currentUser.id) return;
+        this.restoring = true;
+        try {
+            document.getElementById('messageActions')?.close();
+            if (state.view === 'messages' && !state.peer) document.getElementById('chatShell').classList.remove('thread-open');
+            showView(state.view);
+            if (state.view === 'messages' && state.peer) openConversation(state.peer);
+        } finally { this.restoring = false; }
+    }
+};
+window.addEventListener('popstate', event => window.BJKNavigation.restore(event.state));
+
 function showView(viewName) {
     if (viewName !== 'games') window.BJKFlappy?.close();
     const changed = appState.currentView !== viewName;
@@ -353,6 +376,7 @@ function showView(viewName) {
         if (log) log.scrollTop = log.scrollHeight;
     }
     if (changed) window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    window.BJKNavigation?.record();
     if (changed && viewName === 'prayers' && appState.currentUser) {
         prayerRenderKey = '';
         renderPrayers();
@@ -757,6 +781,7 @@ function openConversation(id, messageId = '') {
     hideMessage('messageFormError');
     document.getElementById('messageText').value = chatState.drafts.get(id) || '';
     document.getElementById('chatShell').classList.add('thread-open');
+    window.BJKNavigation?.record();
     renderMessages();
     markVisibleHeartsRead();
     markVisibleChatRead();
@@ -1927,6 +1952,7 @@ function setUpEventBindings() {
     setInterval(pollChatMessages, 1000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshChatMessages(); });
     document.getElementById('chatBack')?.addEventListener('click', () => {
+        if (window.history.state?.bjkView && window.history.state.peer) { window.history.back(); return; }
         document.getElementById('chatShell').classList.remove('thread-open');
         const selected = document.querySelector('.conversation.selected');
         selected?.focus();
