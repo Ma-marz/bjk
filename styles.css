@@ -211,7 +211,17 @@ body:has(#appScreen.hidden) .site-footer { padding-bottom: 24px; }
 
 @media (max-width: 699px) {
   #view-messages:has(.thread-open) > .section-heading { display: none; }
-  .chat-shell.thread-open { height: calc(100dvh - 215px); min-height: 300px; }
+  body:has(#view-messages:not(.hidden) .thread-open) { overflow: hidden; }
+  body:has(#view-messages:not(.hidden) .thread-open) .topbar,
+  body:has(#view-messages:not(.hidden) .thread-open) .main-nav,
+  body:has(#view-messages:not(.hidden) .thread-open) .site-footer,
+  body:has(#view-messages:not(.hidden) .thread-open) #pageActivity { display: none; }
+  #view-messages:not(.hidden) .chat-shell.thread-open {
+    position: fixed; inset: 0; z-index: 30; width: 100%; height: 100dvh;
+    min-height: 0; max-height: none; border: 0; border-radius: 0; box-shadow: none;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
 
 .chat-avatar { position: relative; overflow: hidden; }
